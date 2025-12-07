@@ -22,7 +22,37 @@ We propose a system that:
 
 ---
 
-## 2. System Architecture
+## 2. Research Description
+
+### 2.1 Medical Research Context
+The application of Artificial Intelligence in healthcare is often bottlenecked by the difficulty of accessing large, diverse datasets. While hospitals possess vast amounts of patient data, stringent regulations (HIPAA, GDPR) and ethical concerns prevent the centralization of this sensitive information. This creates a **Data Silo Problem**, where AI models are trained on limited, biased datasets, leading to poor generalization.
+
+### 2.2 Research Gap
+Existing solutions like standard Federated Learning (FL) solve the data centralization issue but fail to address **Dynamic Patient Consent**. In traditional FL, once a hospital joins a network, all its diverse data is typically used for training. There is no granular, patient-level control to specificy "I want my data used for Cancer Research but not for Commercial Drug Discovery" or "I want to withdraw my consent today."
+
+### 2.3 Novel Contribution: NFT-Based Dynamic Consent
+This project introduces a **Patient-Centric Privacy Framework** where informed consent is not a static paper form but a dynamic, digital asset—an **NFT (Non-Fungible Token)**.
+- **Tokenization of Rights**: Each patient's consent status is minted as an NFT on a blockchain.
+- **Granular Control**: The NFT metadata contains specific permissions (e.g., `allow_training: True`, `expiry: 2025-12-31`).
+- **Immutable Audit Trail**: Every change in consent (granting or revoking) is recorded as a transaction, providing a tamper-proof legal audit trail.
+
+### 2.4 Theoretical Framework & Mathematical Formulation
+The core innovation is the integration of the **Consent Filter** into the Federated Learning objective function.
+
+**Standard FL Objective:**
+$$ \min_{w} \sum_{k=1}^{K} \frac{n_k}{n} F_k(w) $$
+Where $n_k$ is the total samples at hospital $k$.
+
+**Proposed Information-Theoretic Consent-FL Objective:**
+We modify the local dataset $D_k$ to be dynamic based on the blockchain state $B_t$ at training round $t$.
+$$ D_k^{(t)} = \{ (x_i, y_i) \in D_k \mid \text{Verify}(NFT_i, B_t) == \text{True} \} $$
+The verification function $\text{Verify}$ checks the smart contract for valid, unexpired consent.
+
+This ensures that the global model $W_{global}$ converges to a solution that respects individual privacy preferences in real-time, effectively implementing the **Right to be Forgotten** in machine learning.
+
+---
+
+## 3. System Architecture
 
 The system is composed of three primary layers:
 
@@ -81,7 +111,66 @@ The system is composed of three primary layers:
 
 ---
 
-## 4. Tools & Technologies
+## 4. Machine Learning Models
+
+The system supports three distinct model architectures to handle various healthcare prediction tasks:
+
+### 4.1 Logistic Regression
+- **Type**: Linear Model
+- **Usage**: Primary for binary classification tasks (e.g., presence vs. absence of disease).
+- **Configuration**:
+    - **Solver**: L-BFGS (Limited-memory Broyden–Fletcher–Goldfarb–Shanno).
+    - **Max Iterations**: 1000 for convergence.
+    - **Features**: Highly interpretable, lightweight, and efficient for initial benchmarks.
+- **Why it's used**: Provides a baseline for performance; essential for scenarios requiring explainability in medical decisions.
+
+### 4.2 Neural Network (Multi-Layer Perceptron)
+- **Type**: Deep Learning Classifier
+- **Architecture**:
+    - **Input Layer**: Matches feature dimension derived from patient records.
+    - **Hidden Layers**: Two dense layers with **100** and **50** units respectively.
+    - **Activation Function**: ReLU (Rectified Linear Unit) for non-linearity.
+- **Configuration**:
+    - **Optimizer**: Adam (Adaptive Moment Estimation).
+    - **Max Iterations**: 500.
+- **Why it's used**: Captures complex, non-linear relationships in patient data that simpler models might miss, offering higher potential accuracy for complex diagnoses.
+
+### 4.3 Support Vector Machine (SVM)
+- **Type**: Kernel-based Classifier
+- **Configuration**:
+    - **Kernel**: RBF (Radial Basis Function) to handle non-linear decision boundaries.
+    - **Probability Estimates**: Enabled (computationally expensive but necessary for confidence scores).
+    - **Regularization**: Optimized to prevent overfitting on smaller hospital datasets.
+- **Why it's used**: Effective in high-dimensional spaces and robust even when the number of dimensions exceeds the number of samples, common in specific genomic or rare-disease datasets.
+
+---
+
+## 5. Training Modes
+
+To address varying levels of privacy requirements, the system implements three federated training strategies:
+
+### 5.1 Standard Federated Learning
+- **Mechanism**: Standard **FedAvg** (Federated Averaging).
+- **Process**: Nodes compute gradients locally and send raw model updates to the server. The server averages these weights to update the global model.
+- **Use Case**: Default mode where trust is established between the central server and hospital nodes, prioritizing maximum model utility and convergence speed.
+
+### 5.2 Secure Aggregation
+- **Mechanism**: Simulated Multi-Party Computation (MPC).
+- **Privacy Guarantee**: Ensures the central server cannot inspect individual hospital updates. It can only see the *sum* of the updates.
+- **Implementation**: Updates are "masked" cryptographically before transmission. The masks cancel out during the aggregation phase, revealing only the correct global average.
+- **Trade-off**: High computational overhead but prevents "inference attacks" on specific hospital data distributions.
+
+### 5.3 Differential Privacy (DP)
+- **Mechanism**: Gradient Perturbation (Local Differential Privacy).
+- **Privacy Guarantee**: Mathematically guarantees that the output of the model does not reveal whether any specific individual's data was included in the training set.
+- **Implementation**:
+    - **Clipping**: Gradient norms are clipped to a maximum threshold to limit the influence of outliers.
+    - **Noise Injection**: Laplacian or Gaussian noise is added to the local updates before sending them to the server.
+- **Trade-off**: Slightly reduces model accuracy (utility) in exchange for rigorous privacy protection ($(\epsilon, \delta)$-privacy).
+
+---
+
+## 6. Tools & Technologies
 
 | Category | Tools Used | Purpose |
 | :--- | :--- | :--- |
