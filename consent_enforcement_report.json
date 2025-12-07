@@ -1,0 +1,56 @@
+{
+  "total_records": 10000,
+  "consented_records": 6856,
+  "excluded_records": 3144,
+  "overall_consent_rate": 0.6856,
+  "node_statistics": {
+    "node_regional_healthcare_": {
+      "original_size": 1268,
+      "filtered_size": 843,
+      "excluded_size": 425,
+      "inclusion_rate": 0.6648264984227129
+    },
+    "node_veterans_affairs_hos": {
+      "original_size": 1226,
+      "filtered_size": 878,
+      "excluded_size": 348,
+      "inclusion_rate": 0.7161500815660685
+    },
+    "node_metro_general_hospit": {
+      "original_size": 1283,
+      "filtered_size": 870,
+      "excluded_size": 413,
+      "inclusion_rate": 0.6780982073265783
+    },
+    "node_city_medical_center": {
+      "original_size": 1231,
+      "filtered_size": 829,
+      "excluded_size": 402,
+      "inclusion_rate": 0.6734362307067425
+    },
+    "node_st._marys_hospital": {
+      "original_size": 1268,
+      "filtered_size": 858,
+      "excluded_size": 410,
+      "inclusion_rate": 0.6766561514195584
+    },
+    "node_community_health_net": {
+      "original_size": 1234,
+      "filtered_size": 868,
+      "excluded_size": 366,
+      "inclusion_rate": 0.7034035656401945
+    },
+    "node_university_medical_c": {
+      "original_size": 1265,
+      "filtered_size": 877,
+      "excluded_size": 388,
+      "inclusion_rate": 0.6932806324110672
+    },
+    "node_childrens_medical_ce": {
+      "original_size": 1225,
+      "filtered_size": 833,
+      "excluded_size": 392,
+      "inclusion_rate": 0.68
+    }
+  }
+}

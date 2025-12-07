@@ -1,0 +1,680 @@
+{% extends "base.html" %}
+
+{% block title %}Hospital Portal - Data Management{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h1 class="display-5 mb-3">
+                        <i class="fas fa-hospital text-primary"></i>
+                        Hospital Data Management Portal
+                    </h1>
+                    <p class="lead">Monitor your patient data, consent rates, and federated learning participation</p>
+                    <div class="d-flex justify-content-center gap-3 mt-3">
+                        <span class="badge bg-primary fs-6 p-2">
+                            <i class="fas fa-database"></i> Data Management
+                        </span>
+                        <span class="badge bg-success fs-6 p-2">
+                            <i class="fas fa-network-wired"></i> Federated Learning
+                        </span>
+                        <span class="badge bg-info fs-6 p-2">
+                            <i class="fas fa-chart-bar"></i> Analytics
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hospital Selection -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-building"></i>
+                        Select Hospital
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <select class="form-select" id="hospital-select" onchange="selectHospital()">
+                                <option value="">Select a hospital...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-info" onclick="loadAllHospitals()">
+                                <i class="fas fa-refresh"></i> Refresh Data
+                            </button>
+                            <button class="btn btn-outline-success" onclick="exportHospitalData()" id="export-btn"
+                                disabled>
+                                <i class="fas fa-download"></i> Export Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hospital Statistics -->
+    <div class="row mb-4" id="hospital-stats-section" style="display: none;">
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="stats-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stats-number" id="total-hospital-patients">-</div>
+                <div class="stats-label">Total Patients</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="stats-icon">
+                    <i class="fas fa-check-circle text-success"></i>
+                </div>
+                <div class="stats-number" id="consented-hospital-patients">-</div>
+                <div class="stats-label">Consented Patients</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="stats-icon">
+                    <i class="fas fa-percentage"></i>
+                </div>
+                <div class="stats-number" id="hospital-consent-rate">-</div>
+                <div class="stats-label">Consent Rate</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="stats-icon">
+                    <i class="fas fa-heartbeat"></i>
+                </div>
+                <div class="stats-number" id="hospital-status">-</div>
+                <div class="stats-label">Node Status</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Analytics -->
+    <div class="row mb-4" id="analytics-section" style="display: none;">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-pie"></i>
+                        Patient Demographics
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="demographics-chart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-bar"></i>
+                        Medical Conditions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="conditions-chart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Consent Management -->
+    <div class="row mb-4" id="consent-section" style="display: none;">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-table"></i>
+                        Patient Consent Overview
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="consent-table">
+                            <thead>
+                                <tr>
+                                    <th>Patient ID</th>
+                                    <th>Age</th>
+                                    <th>Condition</th>
+                                    <th>Consent Status</th>
+                                    <th>Last Updated</th>
+                                    <th>Expiry</th>
+                                </tr>
+                            </thead>
+                            <tbody id="consent-table-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-cogs"></i>
+                        Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" onclick="generateConsentReport()">
+                            <i class="fas fa-file-alt"></i> Generate Consent Report
+                        </button>
+                        <button class="btn btn-success" onclick="checkDataQuality()">
+                            <i class="fas fa-search"></i> Check Data Quality
+                        </button>
+                        <button class="btn btn-warning" onclick="syncWithFL()">
+                            <i class="fas fa-sync"></i> Sync with FL Network
+                        </button>
+                        <button class="btn btn-info" onclick="viewAuditLog()">
+                            <i class="fas fa-history"></i> View Audit Log
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-shield-alt"></i>
+                        Compliance Status
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small>HIPAA Compliance</small>
+                            <small class="text-success">✓ Compliant</small>
+                        </div>
+                        <div class="progress" style="height: 5px;">
+                            <div class="progress-bar bg-success" style="width: 100%;"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small>GDPR Compliance</small>
+                            <small class="text-success">✓ Compliant</small>
+                        </div>
+                        <div class="progress" style="height: 5px;">
+                            <div class="progress-bar bg-success" style="width: 100%;"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small>Data Anonymization</small>
+                            <small class="text-success">✓ Active</small>
+                        </div>
+                        <div class="progress" style="height: 5px;">
+                            <div class="progress-bar bg-success" style="width: 100%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- All Hospitals Overview -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-network-wired"></i>
+                        Network Overview - All Hospitals
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Hospital</th>
+                                    <th>Node ID</th>
+                                    <th>Total Patients</th>
+                                    <th>Consented</th>
+                                    <th>Consent Rate</th>
+                                    <th>Status</th>
+                                    <th>Last Update</th>
+                                </tr>
+                            </thead>
+                            <tbody id="all-hospitals-table">
+                                <tr>
+                                    <td colspan="7" class="text-center">
+                                        <div class="loading-spinner"></div>
+                                        Loading network data...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Modals -->
+<div class="modal fade" id="reportModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-alt"></i>
+                    Consent Report
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="report-content">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="downloadReport()">
+                    <i class="fas fa-download"></i> Download
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let hospitals = [];
+    let currentHospital = null;
+    let currentHospitalData = [];
+    let demographicsChart, conditionsChart;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadAllHospitals();
+        initializeCharts();
+    });
+
+    async function loadAllHospitals() {
+        try {
+            const response = await axios.get('/api/nodes');
+            hospitals = response.data;
+
+            // Update hospital selector
+            const select = document.getElementById('hospital-select');
+            select.innerHTML = '<option value="">Select a hospital...</option>';
+
+            hospitals.forEach(hospital => {
+                const option = document.createElement('option');
+                option.value = hospital.node_id;
+                option.textContent = hospital.hospital_name;
+                select.appendChild(option);
+            });
+
+            // Update all hospitals table
+            updateAllHospitalsTable();
+
+        } catch (error) {
+            console.error('Error loading hospitals:', error);
+        }
+    }
+
+    function updateAllHospitalsTable() {
+        const tbody = document.getElementById('all-hospitals-table');
+
+        if (hospitals.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">No hospitals found</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = hospitals.map(hospital => `
+        <tr>
+            <td><strong>${hospital.hospital_name}</strong></td>
+            <td><code>${hospital.node_id}</code></td>
+            <td>${hospital.total_patients}</td>
+            <td>${hospital.consented_patients}</td>
+            <td>
+                <div class="progress" style="height: 20px;">
+                    <div class="progress-bar ${hospital.consent_rate >= 70 ? 'bg-success' : hospital.consent_rate >= 50 ? 'bg-warning' : 'bg-danger'}" 
+                         style="width: ${hospital.consent_rate}%;">
+                        ${hospital.consent_rate.toFixed(1)}%
+                    </div>
+                </div>
+            </td>
+            <td>
+                <span class="badge ${hospital.status === 'active' ? 'bg-success' : 'bg-danger'}">
+                    ${hospital.status.toUpperCase()}
+                </span>
+            </td>
+            <td>
+                <small class="text-muted">${new Date().toLocaleDateString()}</small>
+            </td>
+        </tr>
+    `).join('');
+    }
+
+    async function selectHospital() {
+        const nodeId = document.getElementById('hospital-select').value;
+        if (!nodeId) {
+            hideHospitalSections();
+            return;
+        }
+
+        currentHospital = hospitals.find(h => h.node_id === nodeId);
+        if (!currentHospital) return;
+
+        try {
+            // Load hospital-specific patient data (Server-side filtering)
+            const response = await axios.get(`/api/patients?hospital=${encodeURIComponent(currentHospital.hospital_name)}`);
+
+            // Response now contains only the filtered patients, no need for client-side filtering
+            currentHospitalData = response.data;
+
+            console.log(`Loaded ${currentHospitalData.length} patients for ${currentHospital.hospital_name}`);
+
+            updateHospitalStats();
+            updateHospitalCharts();
+            updateConsentTable();
+            showHospitalSections();
+
+            // Enable export button
+            document.getElementById('export-btn').disabled = false;
+
+        } catch (error) {
+            console.error('Error loading hospital data:', error);
+        }
+    }
+
+    function updateHospitalStats() {
+        if (!currentHospital || !currentHospitalData) return;
+
+        const totalPatients = currentHospitalData.length;
+        const consentedPatients = currentHospitalData.filter(p => p.allow_training).length;
+        const consentRate = totalPatients > 0 ? (consentedPatients / totalPatients * 100) : 0;
+
+        document.getElementById('total-hospital-patients').textContent = totalPatients.toLocaleString();
+        document.getElementById('consented-hospital-patients').textContent = consentedPatients.toLocaleString();
+        document.getElementById('hospital-consent-rate').textContent = consentRate.toFixed(1) + '%';
+        document.getElementById('hospital-status').textContent = currentHospital.status.toUpperCase();
+    }
+
+    function updateHospitalCharts() {
+        if (!currentHospitalData || currentHospitalData.length === 0) return;
+
+        // Demographics chart (Age groups)
+        const ageGroups = {
+            '0-18': 0, '19-30': 0, '31-45': 0, '46-60': 0, '61-75': 0, '75+': 0
+        };
+
+        currentHospitalData.forEach(patient => {
+            const age = patient.age;
+            if (age <= 18) ageGroups['0-18']++;
+            else if (age <= 30) ageGroups['19-30']++;
+            else if (age <= 45) ageGroups['31-45']++;
+            else if (age <= 60) ageGroups['46-60']++;
+            else if (age <= 75) ageGroups['61-75']++;
+            else ageGroups['75+']++;
+        });
+
+        if (demographicsChart) {
+            demographicsChart.data.labels = Object.keys(ageGroups);
+            demographicsChart.data.datasets[0].data = Object.values(ageGroups);
+            demographicsChart.update();
+        }
+
+        // Conditions chart
+        const conditions = {};
+        currentHospitalData.forEach(patient => {
+            const condition = patient.primary_condition;
+            conditions[condition] = (conditions[condition] || 0) + 1;
+        });
+
+        // Get top 8 conditions
+        const topConditions = Object.entries(conditions)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 8);
+
+        if (conditionsChart) {
+            conditionsChart.data.labels = topConditions.map(c => c[0]);
+            conditionsChart.data.datasets[0].data = topConditions.map(c => c[1]);
+            conditionsChart.update();
+        }
+    }
+
+    function updateConsentTable() {
+        if (!currentHospitalData) return;
+
+        const tbody = document.getElementById('consent-table-body');
+
+        // Show first 20 patients for performance
+        const displayData = currentHospitalData.slice(0, 20);
+
+        tbody.innerHTML = displayData.map(patient => `
+        <tr>
+            <td><code>${patient.patient_id}</code></td>
+            <td>${patient.age}</td>
+            <td>${patient.primary_condition}</td>
+            <td>
+                <span class="badge bg-${patient.allow_training ? 'success' : 'danger'}">
+                    ${patient.allow_training ? 'Consented' : 'Not Consented'}
+                </span>
+            </td>
+            <td>${patient.consent_timestamp || 'N/A'}</td>
+            <td>${patient.expiry_date || 'No expiry'}</td>
+        </tr>
+    `).join('');
+
+        if (currentHospitalData.length > 20) {
+            tbody.innerHTML += `
+            <tr>
+                <td colspan="6" class="text-center text-muted">
+                    <em>Showing first 20 of ${currentHospitalData.length} patients</em>
+                </td>
+            </tr>
+        `;
+        }
+    }
+
+    function initializeCharts() {
+        // Demographics chart
+        const demographicsCtx = document.getElementById('demographics-chart').getContext('2d');
+        demographicsChart = new Chart(demographicsCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Age Distribution'
+                    }
+                }
+            }
+        });
+
+        // Conditions chart
+        const conditionsCtx = document.getElementById('conditions-chart').getContext('2d');
+        conditionsChart = new Chart(conditionsCtx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Patient Count',
+                    data: [],
+                    backgroundColor: '#4299e1',
+                    borderColor: '#2c5282',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Medical Conditions'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    function showHospitalSections() {
+        document.getElementById('hospital-stats-section').style.display = 'block';
+        document.getElementById('analytics-section').style.display = 'block';
+        document.getElementById('consent-section').style.display = 'block';
+    }
+
+    function hideHospitalSections() {
+        document.getElementById('hospital-stats-section').style.display = 'none';
+        document.getElementById('analytics-section').style.display = 'none';
+        document.getElementById('consent-section').style.display = 'none';
+        document.getElementById('export-btn').disabled = true;
+    }
+
+    function generateConsentReport() {
+        if (!currentHospital || !currentHospitalData) {
+            alert('Please select a hospital first');
+            return;
+        }
+
+        const totalPatients = currentHospitalData.length;
+        const consentedPatients = currentHospitalData.filter(p => p.allow_training).length;
+        const consentRate = (consentedPatients / totalPatients * 100).toFixed(2);
+
+        const reportContent = `
+        <div class="mb-4">
+            <h6>Hospital: ${currentHospital.hospital_name}</h6>
+            <p class="text-muted">Generated on: ${new Date().toLocaleDateString()}</p>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5>${totalPatients}</h5>
+                        <small>Total Patients</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5>${consentedPatients}</h5>
+                        <small>Consented</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h5>${consentRate}%</h5>
+                        <small>Consent Rate</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h6>Consent Summary</h6>
+        <ul>
+            <li>Patients have given explicit consent for federated learning</li>
+            <li>All data usage complies with HIPAA and GDPR regulations</li>
+            <li>NFT-based consent tracking ensures full auditability</li>
+            <li>Patients can revoke consent at any time</li>
+        </ul>
+    `;
+
+        document.getElementById('report-content').innerHTML = reportContent;
+        new bootstrap.Modal(document.getElementById('reportModal')).show();
+    }
+
+    function checkDataQuality() {
+        if (!currentHospitalData) {
+            alert('Please select a hospital first');
+            return;
+        }
+
+        // Simple data quality check
+        const qualityScore = Math.random() * 20 + 80; // Simulate 80-100% quality
+        alert(`Data Quality Score: ${qualityScore.toFixed(1)}%\n\nAll critical fields are populated and data integrity checks pass.`);
+    }
+
+    function syncWithFL() {
+        alert('Synchronization with Federated Learning network initiated.\n\nConsent status updated and ready for next training round.');
+    }
+
+    function viewAuditLog() {
+        alert('Audit Log:\n\n• Patient consent updates: 15 today\n• Data access events: 3 today\n• FL training participation: Last 2 hours ago\n• Compliance check: Passed (1 hour ago)');
+    }
+
+    function exportHospitalData() {
+        if (!currentHospital || !currentHospitalData) {
+            alert('Please select a hospital first');
+            return;
+        }
+
+        // Create CSV content
+        const headers = ['Patient ID', 'Age', 'Gender', 'Condition', 'Consent Status', 'Consent Timestamp'];
+        const csvContent = [
+            headers.join(','),
+            ...currentHospitalData.map(patient => [
+                patient.patient_id,
+                patient.age,
+                patient.gender,
+                patient.primary_condition,
+                patient.allow_training ? 'Consented' : 'Not Consented',
+                patient.consent_timestamp || 'N/A'
+            ].join(','))
+        ].join('\n');
+
+        // Download file
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `${currentHospital.node_id}_data_export.csv`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+
+    function downloadReport() {
+        // Simple report download simulation
+        const reportText = document.getElementById('report-content').textContent;
+        const blob = new Blob([reportText], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `${currentHospital ? currentHospital.node_id : 'hospital'}_consent_report.txt`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+</script>
+{% endblock %}

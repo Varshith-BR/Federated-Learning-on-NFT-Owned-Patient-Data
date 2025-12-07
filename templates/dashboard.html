@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Federated Learning on NFT-Owned Patient Data{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h1 class="display-4 mb-3">
+                        <i class="fas fa-shield-alt text-primary"></i>
+                        Federated Learning on NFT-Owned Patient Data
+                    </h1>
+                    <p class="lead">Secure, consent-driven AI training across distributed healthcare networks</p>
+                    <div class="d-flex justify-content-center gap-3 mt-3">
+                        <span class="badge bg-primary fs-6 p-2">
+                            <i class="fas fa-network-wired"></i> Federated Learning
+                        </span>
+                        <span class="badge bg-success fs-6 p-2">
+                            <i class="fab fa-ethereum"></i> NFT Consent
+                        </span>
+                        <span class="badge bg-info fs-6 p-2">
+                            <i class="fas fa-lock"></i> HIPAA/GDPR Compliant
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="stats-icon">
+                    <i class="fas fa-hospital"></i>
+                </div>
+                <div class="stats-number" id="total-nodes">-</div>
+                <div class="stats-label">Hospital Nodes</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="stats-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stats-number" id="total-patients">-</div>
+                <div class="stats-label">Total Patients</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="stats-icon">
+                    <i class="fas fa-check-circle text-success"></i>
+                </div>
+                <div class="stats-number" id="consented-patients">-</div>
+                <div class="stats-label">Consented Patients</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="stats-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <div class="stats-number" id="model-accuracy">-</div>
+                <div class="stats-label">Model Accuracy</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hospital Nodes Status -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-network-wired"></i>
+                        Hospital Nodes Status
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Hospital</th>
+                                    <th>Node ID</th>
+                                    <th>Total Patients</th>
+                                    <th>Consented</th>
+                                    <th>Consent Rate</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="nodes-table">
+                                <tr>
+                                    <td colspan="6" class="text-center">
+                                        <div class="loading-spinner"></div>
+                                        Loading hospital nodes...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Model Performance -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-line"></i>
+                        Global Model Performance
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="performance-chart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-pie-chart"></i>
+                        Consent Distribution
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="consent-chart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Training History -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-history"></i>
+                        Training History
+                    </h5>
+                    <button class="btn btn-primary" onclick="refreshTrainingHistory()">
+                        <i class="fas fa-refresh"></i> Refresh
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="training-history">
+                        <div class="text-center">
+                            <div class="loading-spinner"></div>
+                            Loading training history...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-injured stats-icon text-primary"></i>
+                    <h5>Patient Portal</h5>
+                    <p>Manage patient consent and view NFT ownership</p>
+                    <a href="{{ url_for('patient_portal') }}" class="btn btn-primary">
+                        <i class="fas fa-arrow-right"></i> Access Portal
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-hospital stats-icon text-success"></i>
+                    <h5>Hospital Portal</h5>
+                    <p>View hospital data and manage federated learning</p>
+                    <a href="{{ url_for('hospital_portal') }}" class="btn btn-success">
+                        <i class="fas fa-arrow-right"></i> Access Portal
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-brain stats-icon text-warning"></i>
+                    <h5>FL Training</h5>
+                    <p>Start and monitor federated learning training</p>
+                    <a href="{{ url_for('training_dashboard') }}" class="btn btn-warning">
+                        <i class="fas fa-arrow-right"></i> Start Training
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let performanceChart, consentChart;
+
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardData();
+    initializeCharts();
+
+    // Auto-refresh every 30 seconds
+    setInterval(loadDashboardData, 30000);
+});
+
+async function loadDashboardData() {
+    try {
+        // Load nodes data
+        const nodesResponse = await axios.get('/api/nodes');
+        const nodes = nodesResponse.data;
+        updateNodesTable(nodes);
+        updateStatistics(nodes);
+
+        // Load global model state
+        const modelResponse = await axios.get('/api/global_model');
+        const modelState = modelResponse.data;
+        updateModelStats(modelState);
+
+        // Load consent analytics
+        const analyticsResponse = await axios.get('/api/consent_analytics');
+        const analytics = analyticsResponse.data;
+        updateConsentChart(analytics);
+
+        // Load training history
+        await refreshTrainingHistory();
+
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+    }
+}
+
+function updateNodesTable(nodes) {
+    const tbody = document.getElementById('nodes-table');
+
+    if (nodes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hospital nodes found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = nodes.map(node => `
+        <tr>
+            <td>
+                <strong>${node.hospital_name}</strong>
+            </td>
+            <td>
+                <code>${node.node_id}</code>
+            </td>
+            <td>${node.total_patients}</td>
+            <td>${node.consented_patients}</td>
+            <td>
+                <div class="progress" style="height: 20px;">
+                    <div class="progress-bar ${node.consent_rate >= 70 ? 'bg-success' : node.consent_rate >= 50 ? 'bg-warning' : 'bg-danger'}" 
+                         style="width: ${node.consent_rate}%;">
+                        ${node.consent_rate.toFixed(1)}%
+                    </div>
+                </div>
+            </td>
+            <td>
+                <span class="status-badge ${node.status === 'active' ? 'status-active' : 'status-inactive'}">
+                    ${node.status.toUpperCase()}
+                </span>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function updateStatistics(nodes) {
+    const totalNodes = nodes.length;
+    const totalPatients = nodes.reduce((sum, node) => sum + node.total_patients, 0);
+    const consentedPatients = nodes.reduce((sum, node) => sum + node.consented_patients, 0);
+
+    document.getElementById('total-nodes').textContent = totalNodes;
+    document.getElementById('total-patients').textContent = totalPatients.toLocaleString();
+    document.getElementById('consented-patients').textContent = consentedPatients.toLocaleString();
+}
+
+function updateModelStats(modelState) {
+    const accuracy = modelState.accuracy || 0;
+    document.getElementById('model-accuracy').textContent = (accuracy * 100).toFixed(1) + '%';
+}
+
+function updateConsentChart(analytics) {
+    if (!consentChart) return;
+
+    const overview = analytics.overview;
+    consentChart.data.datasets[0].data = [
+        overview.consented_patients,
+        overview.total_patients - overview.consented_patients
+    ];
+    consentChart.update();
+}
+
+function initializeCharts() {
+    // Performance chart
+    const performanceCtx = document.getElementById('performance-chart').getContext('2d');
+    performanceChart = new Chart(performanceCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Accuracy',
+                data: [],
+                borderColor: '#4299e1',
+                backgroundColor: 'rgba(66, 153, 225, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Model Accuracy Over Time'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 1
+                }
+            }
+        }
+    });
+
+    // Consent chart
+    const consentCtx = document.getElementById('consent-chart').getContext('2d');
+    consentChart = new Chart(consentCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Consented', 'Not Consented'],
+            datasets: [{
+                data: [0, 0],
+                backgroundColor: ['#38a169', '#e53e3e'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Patient Consent Distribution'
+                },
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+async function refreshTrainingHistory() {
+    try {
+        const response = await axios.get('/api/training_history');
+        const history = response.data;
+
+        const historyContainer = document.getElementById('training-history');
+
+        if (history.length === 0) {
+            historyContainer.innerHTML = '<div class="text-center text-muted">No training history available</div>';
+            return;
+        }
+
+        // Update performance chart
+        if (performanceChart) {
+            performanceChart.data.labels = history.map(h => `Round ${h.round}`);
+            performanceChart.data.datasets[0].data = history.map(h => h.global_accuracy);
+            performanceChart.update();
+        }
+
+        // Display history table
+        historyContainer.innerHTML = `
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Round</th>
+                            <th>Accuracy</th>
+                            <th>Loss</th>
+                            <th>Participating Nodes</th>
+                            <th>Consented Data</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${history.map(h => `
+                            <tr>
+                                <td><strong>Round ${h.round}</strong></td>
+                                <td>
+                                    <span class="badge bg-success">${(h.global_accuracy * 100).toFixed(2)}%</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">${h.global_loss.toFixed(3)}</span>
+                                </td>
+                                <td>${h.participating_nodes}/${h.total_nodes}</td>
+                                <td>${h.total_consented_data.toLocaleString()}</td>
+                                <td>${new Date(h.timestamp).toLocaleString()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('Error loading training history:', error);
+        document.getElementById('training-history').innerHTML = 
+            '<div class="text-center text-danger">Error loading training history</div>';
+    }
+}
+</script>
+{% endblock %}

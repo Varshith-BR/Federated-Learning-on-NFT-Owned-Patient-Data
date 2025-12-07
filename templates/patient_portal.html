@@ -1,0 +1,546 @@
+{% extends "base.html" %}
+
+{% block title %}Patient Portal - NFT Consent Management{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h1 class="display-5 mb-3">
+                        <i class="fas fa-user-injured text-primary"></i>
+                        Patient Consent Portal
+                    </h1>
+                    <p class="lead">Manage your data ownership and consent preferences with NFT-based control</p>
+                    <div class="d-flex justify-content-center gap-3 mt-3">
+                        <span class="badge bg-primary fs-6 p-2">
+                            <i class="fas fa-shield-alt"></i> Your Data, Your Choice
+                        </span>
+                        <span class="badge bg-success fs-6 p-2">
+                            <i class="fab fa-ethereum"></i> NFT Ownership
+                        </span>
+                        <span class="badge bg-info fs-6 p-2">
+                            <i class="fas fa-history"></i> Audit Trail
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient Search -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-search"></i>
+                        Find Your Patient Record
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-id-card"></i>
+                                </span>
+                                <input type="text" class="form-control" id="patient-search"
+                                    placeholder="Enter Patient ID (e.g., P000001)">
+                                <button class="btn btn-primary" onclick="searchPatient()">
+                                    <i class="fas fa-search"></i> Search
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-outline-secondary" onclick="loadRandomPatient()">
+                                <i class="fas fa-random"></i> Load Random Patient
+                            </button>
+                            <button class="btn btn-outline-info" onclick="loadAllPatients()">
+                                <i class="fas fa-list"></i> Browse All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient Information -->
+    <div class="row mb-4" id="patient-info-section" style="display: none;">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-user"></i>
+                        Patient Information
+                    </h5>
+                </div>
+                <div class="card-body" id="patient-details">
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fab fa-ethereum"></i>
+                        NFT Ownership Details
+                    </h5>
+                </div>
+                <div class="card-body" id="nft-details">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Consent Management -->
+    <div class="row mb-4" id="consent-management-section" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-toggle-on"></i>
+                        Consent Management
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center mb-3">
+                                <div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="consent-checkbox"
+                                            style="width: 3em; height: 1.5em; cursor: pointer;">
+                                        <label class="form-check-label ms-2 h6 mb-0" for="consent-checkbox">Allow Data
+                                            for Training</label>
+                                    </div>
+                                    <small class="text-muted d-block mt-2">
+                                        Grant permission for your data to be used in federated machine learning training
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    Consent Expiry Date (Optional)
+                                </label>
+                                <input type="date" class="form-control" id="expiry-date" min="">
+                                <small class="text-muted">Leave blank for indefinite consent</small>
+                            </div>
+
+                            <button class="btn btn-success" onclick="updateConsent()">
+                                <i class="fas fa-save"></i> Update Consent
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-info-circle"></i> Privacy Guarantee</h6>
+                                <ul class="mb-0 small">
+                                    <li>Your raw data never leaves your hospital</li>
+                                    <li>Only model updates are shared</li>
+                                    <li>You can revoke consent anytime</li>
+                                    <li>Full audit trail maintained</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient List -->
+    <div class="row mb-4" id="patients-list-section">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-list"></i>
+                        Patient Records
+                    </h5>
+                    <div>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="filterConsented()">
+                            <i class="fas fa-filter"></i> Consented Only
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="filterNotConsented()">
+                            <i class="fas fa-filter"></i> Not Consented
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="clearFilter()">
+                            <i class="fas fa-times"></i> Clear Filter
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="patients-table">
+                            <thead>
+                                <tr>
+                                    <th>Patient ID</th>
+                                    <th>Age</th>
+                                    <th>Gender</th>
+                                    <th>Condition</th>
+                                    <th>Hospital</th>
+                                    <th>Wallet ID</th>
+                                    <th>Consent Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="patients-table-body">
+                                <tr>
+                                    <td colspan="8" class="text-center">
+                                        <div class="loading-spinner"></div>
+                                        Loading patient records...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <nav aria-label="Patients pagination" id="pagination-container">
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle text-success"></i>
+                    Success
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="success-message">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let allPatients = [];
+    let filteredPatients = [];
+    let currentPatient = null;
+    let currentPage = 1;
+    const patientsPerPage = 10;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        loadAllPatients();
+
+        // Set minimum date for expiry to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('expiry-date').min = today;
+    });
+
+    async function loadAllPatients() {
+        try {
+            const response = await axios.get('/api/patients?t=' + new Date().getTime());
+            allPatients = response.data;
+
+            // DEBUG: Show structure
+            const debugEl = document.getElementById('debug-output');
+            if (debugEl && allPatients.length > 0) {
+                const sample = allPatients[0];
+                debugEl.textContent = "KEYS FOUND: " + Object.keys(sample).join(", ") + "\n\nRAW JSON:\n" + JSON.stringify(sample, null, 2);
+            }
+
+            filteredPatients = [...allPatients];
+            renderPatientsTable();
+        } catch (error) {
+            console.error('Error loading patients:', error);
+            showError('Failed to load patient data');
+        }
+    }
+
+    function searchPatient() {
+        const patientId = document.getElementById('patient-search').value.trim();
+        if (!patientId) {
+            alert('Please enter a Patient ID');
+            return;
+        }
+
+        const patient = allPatients.find(p => p.patient_id.toLowerCase() === patientId.toLowerCase());
+        if (patient) {
+            showPatientDetails(patient);
+        } else {
+            alert('Patient not found');
+        }
+    }
+
+    function loadRandomPatient() {
+        if (allPatients.length === 0) return;
+
+        const randomIndex = Math.floor(Math.random() * allPatients.length);
+        const randomPatient = allPatients[randomIndex];
+        showPatientDetails(randomPatient);
+        document.getElementById('patient-search').value = randomPatient.patient_id;
+    }
+
+    function showPatientDetails(patient) {
+        currentPatient = patient;
+
+        // Show patient information
+        document.getElementById('patient-details').innerHTML = `
+        <div class="mb-3">
+            <strong>Patient ID:</strong>
+            <code class="ms-2">${patient.patient_id}</code>
+        </div>
+        <div class="mb-3">
+            <strong>Demographics:</strong><br>
+            <span class="text-muted">Age:</span> ${patient.age} years<br>
+            <span class="text-muted">Gender:</span> ${patient.gender}
+        </div>
+        <div class="mb-3">
+            <strong>Medical Information:</strong><br>
+            <span class="text-muted">Primary Condition:</span> ${patient.primary_condition}<br>
+            <span class="text-muted">BMI:</span> ${patient.bmi}
+        </div>
+        <div class="mb-3">
+            <strong>Hospital:</strong><br>
+            ${patient.hospital}
+        </div>
+        <div class="mb-3">
+            <strong>Last Visit:</strong><br>
+            ${patient.visit_date}
+        </div>
+    `;
+
+        // Show NFT details
+        const consentStatus = patient.allow_training ? 'Active' : 'Revoked';
+        const consentClass = patient.allow_training ? 'success' : 'danger';
+
+        document.getElementById('nft-details').innerHTML = `
+        <div class="mb-3">
+            <strong>Wallet Address:</strong><br>
+            <code class="small">${patient.wallet_id || 'Not available'}</code>
+        </div>
+        <div class="mb-3">
+            <strong>Data Hash:</strong><br>
+            <code class="small">${patient.data_hash || 'Not available'}</code>
+        </div>
+        <div class="mb-3">
+            <strong>Consent Status:</strong><br>
+            <span class="badge bg-${consentClass} fs-6">${consentStatus}</span>
+        </div>
+        <div class="mb-3">
+            <strong>Last Updated:</strong><br>
+            ${patient.consent_timestamp || 'Not available'}
+        </div>
+        <div class="mb-3">
+            <strong>Expiry Date:</strong><br>
+            ${patient.expiry_date || 'No expiration'}
+        </div>
+    `;
+
+        // Update consent form
+        document.getElementById('consent-checkbox').checked = patient.allow_training || false;
+        document.getElementById('expiry-date').value = patient.expiry_date || '';
+
+        // Show sections
+        document.getElementById('patient-info-section').style.display = 'block';
+        document.getElementById('consent-management-section').style.display = 'block';
+    }
+
+    async function updateConsent() {
+        if (!currentPatient) {
+            alert('Please select a patient first');
+            return;
+        }
+
+        // Check for Wallet
+        if (!userWalletAddress || !signer) {
+            const connect = confirm("You need to connect your MetaMask wallet to sign this consent update. Connect now?");
+            if (connect) {
+                await connectWallet();
+                if (!signer) return; // Still not connected
+            } else {
+                return;
+            }
+        }
+
+        const checkbox = document.getElementById('consent-checkbox');
+        const expiryInput = document.getElementById('expiry-date');
+
+        if (!checkbox) { alert('Error: Checkbox element not found'); return; }
+        if (!expiryInput) { alert('Error: Expiry element not found'); return; }
+
+        const allowTraining = checkbox.checked;
+        const expiryDate = expiryInput.value || null;
+
+        try {
+            // Create message to sign
+            const action = allowTraining ? "GRANT" : "REVOKE";
+            const message = `I hereby ${action} consent for patient data training.\nPatient ID: ${currentPatient.patient_id}\nWallet: ${userWalletAddress}\nDate: ${new Date().toISOString()}`;
+
+            // Request signature
+            const signature = await signer.signMessage(message);
+
+            const response = await axios.post('/api/update_consent', {
+                patient_id: currentPatient.patient_id,
+                allow_training: allowTraining,
+                expiry_date: expiryDate,
+                wallet_address: userWalletAddress,
+                signature: signature
+            });
+            console.log("Response:", response);
+
+            // Update current patient data
+            currentPatient.allow_training = allowTraining;
+            currentPatient.expiry_date = expiryDate;
+            currentPatient.consent_timestamp = new Date().toISOString();
+
+            // Refresh display
+            showPatientDetails(currentPatient);
+
+            // Refresh patients table
+            await loadAllPatients();
+
+            // Show success message
+            document.getElementById('success-message').innerHTML = `
+            <p>Consent successfully updated for patient <strong>${currentPatient.patient_id}</strong>!</p>
+            <p><strong>Status:</strong> ${allowTraining ? 'Consented' : 'Revoked'}</p>
+            ${expiryDate ? `<p><strong>Expires:</strong> ${expiryDate}</p>` : ''}
+        `;
+            new bootstrap.Modal(document.getElementById('successModal')).show();
+
+        } catch (error) {
+            console.error('Error updating consent:', error);
+            alert('Failed to update consent. Please try again.');
+        }
+    }
+
+    function renderPatientsTable() {
+        const tbody = document.getElementById('patients-table-body');
+
+        if (filteredPatients.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center">No patients found</td></tr>';
+            return;
+        }
+
+        // Pagination
+        const startIndex = (currentPage - 1) * patientsPerPage;
+        const endIndex = startIndex + patientsPerPage;
+        const paginatedPatients = filteredPatients.slice(startIndex, endIndex);
+
+        tbody.innerHTML = paginatedPatients.map(patient => `
+        <tr>
+            <td><code>${patient.patient_id}</code></td>
+            <td>${patient.age}</td>
+            <td>${patient.gender}</td>
+            <td>${patient.primary_condition}</td>
+            <td class="small">${patient.hospital}</td>
+            <td class="small"><code>${(patient.wallet_id || '').substring(0, 10)}...</code></td>
+            <td>
+                <span class="badge bg-${patient.allow_training ? 'success' : 'danger'}">
+                    ${patient.allow_training ? 'Consented' : 'Not Consented'}
+                </span>
+            </td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="viewPatient('${patient.patient_id}')">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+
+        renderPagination();
+    }
+
+    function renderPagination() {
+        const totalPages = Math.ceil(filteredPatients.length / patientsPerPage);
+        const container = document.getElementById('pagination-container');
+
+        if (totalPages <= 1) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let paginationHTML = '<ul class="pagination justify-content-center">';
+
+        // Previous button
+        paginationHTML += `
+        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="changePage(${currentPage - 1})">Previous</a>
+        </li>
+    `;
+
+        // Page numbers
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === currentPage) {
+                paginationHTML += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+            } else {
+                paginationHTML += `<li class="page-item"><a class="page-link" href="#" onclick="changePage(${i})">${i}</a></li>`;
+            }
+        }
+
+        // Next button
+        paginationHTML += `
+        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <a class="page-link" href="#" onclick="changePage(${currentPage + 1})">Next</a>
+        </li>
+    `;
+
+        paginationHTML += '</ul>';
+        container.innerHTML = paginationHTML;
+    }
+
+    function changePage(page) {
+        const totalPages = Math.ceil(filteredPatients.length / patientsPerPage);
+        if (page < 1 || page > totalPages) return;
+
+        currentPage = page;
+        renderPatientsTable();
+    }
+
+    function viewPatient(patientId) {
+        const patient = allPatients.find(p => p.patient_id === patientId);
+        if (patient) {
+            showPatientDetails(patient);
+            document.getElementById('patient-search').value = patientId;
+
+            // Scroll to patient info
+            document.getElementById('patient-info-section').scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+    }
+
+    function filterConsented() {
+        filteredPatients = allPatients.filter(p => p.allow_training);
+        currentPage = 1;
+        renderPatientsTable();
+    }
+
+    function filterNotConsented() {
+        filteredPatients = allPatients.filter(p => !p.allow_training);
+        currentPage = 1;
+        renderPatientsTable();
+    }
+
+    function clearFilter() {
+        filteredPatients = [...allPatients];
+        currentPage = 1;
+        renderPatientsTable();
+    }
+
+    function showError(message) {
+        const tbody = document.getElementById('patients-table-body');
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-danger">${message}</td></tr>`;
+    }
+</script>
+{% endblock %}
