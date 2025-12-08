@@ -1,0 +1,21 @@
+address,role,entity_id,entity_name,description
+0x90f8bf6a479f320ead074411a4b0e7944ea8c9c1,admin,admin_001,FL System Administrator,Full access to all portals and training controls
+0xffcf8fdee72ac11b5c542428b35eef5769c409f0,admin,admin_002,Research Coordinator,Full access to FL training and analytics
+0x22d491bde2303f2f43325b2108d26f1eaba1e32b,hospital,node_metro_general,Metro General Hospital,Access to Metro General Hospital patient data only
+0xe11ba2b4d45eaed5996cd0823791e0c93114882d,hospital,node_regional,Regional Healthcare System,Access to Regional Healthcare System patient data only
+0xd03ea8624c8c5987235048901fb614fdca89b117,hospital,node_st_marys,St. Mary's Hospital,Access to St. Mary's Hospital patient data only
+0x95ced938f7991cd0dfcb48f0a06a40fa1af46ebc,hospital,node_university,University Medical Center,Access to University Medical Center patient data only
+0x3e5e9111ae8eb78fe1cc3bb8915d5d461f3ef9a9,hospital,node_community,Community Health Network,Access to Community Health Network patient data only
+0x28a8746e75304c0780e011bed21c72cd78cd535e,hospital,node_city,City Medical Center,Access to City Medical Center patient data only
+0xaca94ef8bd5ffee41947b4585a84bda5a3d3da6e,hospital,node_veterans,Veterans Affairs Hospital,Access to Veterans Affairs Hospital patient data only
+0x1df62f291b2e969fb0849d99d9ce41e2f137006e,hospital,node_childrens,Children's Medical Center,Access to Children's Medical Center patient data only
+0x610bb1573d1046fcb8a70bbbd395754cd57c2b60,patient,P000023,Patient P000023,Patient data for P000023
+0x855fa758c77d68a04990e992aa4dcdef899f654a,patient,P000028,Patient P000028,Patient data for P000028
+0xfa2435eacf10ca62ae6787ba2fb044f8733ee843,patient,P000034,Patient P000034,Patient data for P000034
+0x64e078a8aa15a41b85890265648e965de686bae6,patient,P000055,Patient P000055,Patient data for P000055
+0x2f560290fef1b3ada194b6aa9c40aa71f8e95598,patient,P000064,Patient P000064,Patient data for P000064
+0xf408f04f9b7691f7174fa2bb73ad6d45fd5d3cbe,patient,P000077,Patient P000077,Patient data for P000077
+0x66fc63c2572bf3add0fe5d44b97c2e614e35e9a3,patient,P000087,Patient P000087,Patient data for P000087
+0xf0d5bc18421fa04d0a2a2ef540ba5a9f04014be3,patient,P000096,Patient P000096,Patient data for P000096
+0x325a621dea613bcfb5b1a69a7aced0ea4afbd73a,patient,P000100,Patient P000100,Patient data for P000100
+0x3fd652c93dfa333979ad762cf581df89baba6795,patient,P000145,Patient P000145,Patient data for P000145

@@ -1,5 +1,5 @@
 
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from flask_cors import CORS
 import pandas as pd
 import numpy as np
@@ -9,13 +9,30 @@ from datetime import datetime, timedelta
 import sqlite3
 import threading
 import time
-import time
 import os
-from blockchain_nft_system import NFTConsentManager
+from functools import wraps
 from blockchain_nft_system import NFTConsentManager
 
 app = Flask(__name__)
-CORS(app)
+app.secret_key = os.urandom(24)  # For session management
+CORS(app, supports_credentials=True)
+
+# Load address mappings for authentication
+address_mapping = {}
+try:
+    mapping_df = pd.read_csv('address_mapping.csv')
+    for _, row in mapping_df.iterrows():
+        address_mapping[row['address'].lower()] = {
+            'role': row['role'],
+            'entity_id': row['entity_id'],
+            'entity_name': row['entity_name'],
+            'description': row['description']
+        }
+    print(f"✅ Loaded {len(address_mapping)} address mappings for authentication")
+except FileNotFoundError:
+    print("⚠️ Warning: address_mapping.csv not found. Authentication disabled.")
+except Exception as e:
+    print(f"⚠️ Error loading address mappings: {e}")
 
 # Global variables for federated learning
 global_model_state = {
@@ -167,23 +184,141 @@ def load_initial_data():
 
     print(f"Loaded {len(fl_engine.nodes)} hospital nodes")
 
+# Authentication decorator
+def require_auth(allowed_roles=None):
+    """Decorator to require authentication for routes"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Check if user is authenticated
+            auth_data = session.get('auth')
+            if not auth_data:
+                return redirect(url_for('login_page'))
+            
+            # Check role if specified
+            if allowed_roles and auth_data.get('role') not in allowed_roles:
+                return jsonify({'error': 'Unauthorized access'}), 403
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def get_current_user():
+    """Get current authenticated user from session"""
+    return session.get('auth')
+
 # Routes
 @app.route('/')
 def home():
-    """Main dashboard"""
+    """Redirect to login if not authenticated, else to appropriate portal"""
+    auth_data = get_current_user()
+    if not auth_data:
+        return redirect(url_for('login_page'))
+    
+    # Redirect based on role
+    role = auth_data.get('role')
+    if role == 'admin':
+        return redirect(url_for('training_dashboard'))
+    elif role == 'hospital':
+        return redirect(url_for('hospital_portal'))
+    elif role == 'patient':
+        return redirect(url_for('patient_portal'))
+    else:
+        return redirect(url_for('login_page'))
+
+@app.route('/login')
+def login_page():
+    """Login page with MetaMask authentication"""
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """Logout user"""
+    session.clear()
+    return redirect(url_for('login_page'))
+
+@app.route('/api/auth/verify', methods=['POST'])
+def verify_address():
+    """Verify Ethereum address and return role"""
+    data = request.json
+    address = data.get('address', '').lower()
+    
+    if not address:
+        return jsonify({'success': False, 'message': 'Address is required'}), 400
+    
+    # Check if address exists in mapping
+    user_data = address_mapping.get(address)
+    
+    if not user_data:
+        return jsonify({
+            'success': False,
+            'message': 'Address not recognized. Please use a registered Ganache address.'
+        }), 403
+    
+    # Clear any existing session first
+    session.clear()
+    
+    # Store authentication in session
+    session['auth'] = {
+        'address': address,
+        'role': user_data['role'],
+        'entity_id': user_data['entity_id'],
+        'entity_name': user_data['entity_name'],
+        'authenticated_at': datetime.now().isoformat()
+    }
+    
+    return jsonify({
+        'success': True,
+        'role': user_data['role'],
+        'entity_id': user_data['entity_id'],
+        'entity_name': user_data['entity_name'],
+        'description': user_data['description']
+    })
+
+@app.route('/api/auth/check', methods=['POST'])
+def check_auth_address():
+    """Check if current MetaMask address matches the session"""
+    data = request.json
+    current_address = data.get('address', '').lower()
+    
+    auth_data = session.get('auth')
+    
+    if not auth_data:
+        return jsonify({'valid': False, 'message': 'No active session'})
+    
+    session_address = auth_data.get('address', '').lower()
+    
+    if current_address != session_address:
+        # Address mismatch - clear session
+        session.clear()
+        return jsonify({
+            'valid': False, 
+            'message': 'Address mismatch', 
+            'requires_reauth': True
+        })
+    
+    return jsonify({'valid': True, 'role': auth_data.get('role')})
+
+@app.route('/dashboard')
+@require_auth()
+def dashboard():
+    """Main dashboard - admin only"""
     return render_template('dashboard.html')
 
 @app.route('/patient')
+@require_auth(allowed_roles=['patient'])
 def patient_portal():
     """Patient consent management portal"""
     return render_template('patient_portal.html')
 
 @app.route('/hospital')
+@require_auth(allowed_roles=['hospital'])
 def hospital_portal():
     """Hospital data management portal"""
     return render_template('hospital_portal.html')
 
 @app.route('/training')
+@require_auth(allowed_roles=['admin'])
 def training_dashboard():
     """Federated learning training dashboard"""
     return render_template('training_dashboard.html')
@@ -192,6 +327,9 @@ def training_dashboard():
 def get_nodes():
     """Get list of registered hospital nodes with live statistics from CSVs"""
     try:
+        # Get current user for filtering
+        auth_data = get_current_user()
+        
         # Load fresh data from Source of Truth
         patient_data = pd.read_csv('patient_dataset.csv')
         nft_metadata = pd.read_csv('nft_metadata.csv')
@@ -203,6 +341,14 @@ def get_nodes():
         # Merge to get allow_training status for all patients
         merged = patient_data.merge(nft_metadata[['patient_id', 'allow_training']], on='patient_id', how='left')
         merged['allow_training'] = merged['allow_training'].fillna(False)
+        
+        # Filter by hospital if user is a hospital role
+        if auth_data and auth_data.get('role') == 'hospital':
+            # Get hospital name from entity_id
+            hospital_node_id = auth_data.get('entity_id')
+            if hospital_node_id in fl_engine.nodes:
+                hospital_name = fl_engine.nodes[hospital_node_id]['hospital_name']
+                merged = merged[merged['hospital'] == hospital_name]
 
         # Group by hospital
         hospital_stats = merged.groupby('hospital').agg(
@@ -212,20 +358,12 @@ def get_nodes():
 
         nodes_info = []
         
-        # Map back to node architecture if needed, or just return hospital list
-        # We'll try to preserve the existing structure but use fresh numbers
-        # Re-using the hospital_files map from startup might be cleaner, but iterating the groupby is robust
-        
-        # We need to map hospital name -> node_id to match frontend expectation
-        # Let's create a reverse mapping from the loaded nodes or just generate simple ones
-        
         for index, row in hospital_stats.iterrows():
             hospital_name = row['hospital']
-            # Find matching node_id from loaded engine or generate one
             node_id = "unknown"
             status = "active"
             
-            # Try to find in existing engine to get the correct node_id (e.g. node_metro_general)
+            # Try to find in existing engine to get the correct node_id
             for nid, ninfo in fl_engine.nodes.items():
                 if ninfo['hospital_name'] == hospital_name:
                     node_id = nid
@@ -233,7 +371,6 @@ def get_nodes():
                     break
             
             if node_id == "unknown":
-                # Fallback if not in engine (shouldn't happen)
                 node_id = f"node_{hospital_name.lower().replace(' ', '_')}"
 
             nodes_info.append({
@@ -326,37 +463,57 @@ def get_blockchain_data():
 
 @app.route('/api/patients')
 def get_patients():
-    """Get patient data with consent information"""
+    """Get patient data with consent information - filtered by role"""
     try:
+        # Get current user for filtering
+        auth_data = get_current_user()
+        
         # Load patient data and NFT metadata
         patient_data = pd.read_csv('patient_dataset.csv')
         nft_metadata = pd.read_csv('nft_metadata.csv')
 
-        # Drop overlapping columns from patient_data (preferring fresh data from nft_metadata)
+        # Drop overlapping columns from patient_data
         cols_to_drop = ['wallet_id', 'allow_training', 'consent_timestamp', 'expiry_date', 'data_hash']
         patient_data = patient_data.drop(columns=[c for c in cols_to_drop if c in patient_data.columns])
 
         # Merge patient data with NFT metadata
-        merged_data = patient_data.merge(nft_metadata[['patient_id', 'wallet_id', 'allow_training', 'consent_timestamp', 'expiry_date']], 
-                                        on='patient_id', how='left')
+        merged_data = patient_data.merge(
+            nft_metadata[['patient_id', 'wallet_id', 'allow_training', 'consent_timestamp', 'expiry_date']], 
+            on='patient_id', 
+            how='left'
+        )
 
-        # Fill NaN values for allow_training with False (default)
+        # Fill NaN values for allow_training with False
         merged_data['allow_training'] = merged_data['allow_training'].fillna(False)
+        
+        # Role-based filtering
+        if auth_data:
+            role = auth_data.get('role')
+            entity_id = auth_data.get('entity_id')
+            
+            if role == 'patient':
+                # Patients can only see their own data
+                merged_data = merged_data[merged_data['patient_id'] == entity_id]
+            
+            elif role == 'hospital':
+                # Hospitals can only see their patients
+                if entity_id in fl_engine.nodes:
+                    hospital_name = fl_engine.nodes[entity_id]['hospital_name']
+                    merged_data = merged_data[merged_data['hospital'] == hospital_name]
+            
+            # Admin sees all (no filtering)
 
-        # Server-side Filtering: Check if hospital is requested
+        # Server-side filtering by hospital parameter (for admin/testing)
         hospital_filter = request.args.get('hospital')
-        if hospital_filter:
+        if hospital_filter and (not auth_data or auth_data.get('role') == 'admin'):
             merged_data = merged_data[merged_data['hospital'] == hospital_filter]
         
-        # Convert to JSON (handling NaNs -> null for valid JSON)
+        # Convert to JSON
         patients = merged_data.replace({np.nan: None}).to_dict('records')
 
-        # Only limit if getting ALL patients (to prevent crash), 
-        # but if filtered by hospital, return all matching patients
-        if not hospital_filter:
-             # Increase limit slightly or implement pagination if needed
-             # For now, return top 200 to keep dashboard responsive
-             return jsonify(patients[:200])
+        # Limit results for non-filtered queries
+        if not hospital_filter and (not auth_data or auth_data.get('role') == 'admin'):
+            return jsonify(patients[:200])
         
         return jsonify(patients)
 

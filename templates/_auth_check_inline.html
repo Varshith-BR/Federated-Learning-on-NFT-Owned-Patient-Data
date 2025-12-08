@@ -1,0 +1,71 @@
+<!-- IMMEDIATE AUTH VERIFICATION - Place in <head> section -->
+<!-- This script runs BEFORE page content loads to verify authentication -->
+<script>
+    // Hide page content until auth is verified
+    document.documentElement.style.opacity = '0';
+
+    (async function () {
+        // Skip check on login page
+        if (window.location.pathname === '/login' || window.location.pathname === '/logout') {
+            document.documentElement.style.opacity = '1';
+            return;
+        }
+
+        // Check if MetaMask is available
+        if (typeof window.ethereum === 'undefined') {
+            window.location.href = '/login';
+            return;
+        }
+
+        try {
+            // Get current MetaMask accounts
+            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+
+            if (accounts.length === 0) {
+                // No account connected - redirect to login
+                window.location.href = '/login';
+                return;
+            }
+
+            const currentAddress = accounts[0].toLowerCase();
+
+            // Verify with backend that this address matches the session
+            const response = await fetch('/api/auth/check', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ address: currentAddress })
+            });
+
+            const data = await response.json();
+
+            if (!data.valid || data.requires_reauth) {
+                // Auth invalid or address mismatch - redirect
+                console.log('Auth validation failed - redirecting to logout');
+                window.location.href = '/logout';
+                return;
+            }
+
+            // Auth is valid - show the page
+            document.documentElement.style.opacity = '1';
+
+        } catch (error) {
+            console.error('Auth check error:', error);
+            // On error, redirect to login to be safe
+            window.location.href = '/login';
+        }
+    })();
+
+    // Also listen for account changes
+    if (typeof window.ethereum !== 'undefined') {
+        window.ethereum.on('accountsChanged', function (accounts) {
+            console.log('MetaMask account changed - redirecting');
+            window.location.href = '/logout';
+        });
+
+        window.ethereum.on('chainChanged', function (chainId) {
+            window.location.href = '/logout';
+        });
+    }
+</script>

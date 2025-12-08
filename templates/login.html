@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - FL-NFT Healthcare System</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .login-header {
+            margin-bottom: 2rem;
+        }
+
+        .login-header h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .login-header p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        .wallet-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .connect-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 1rem 0;
+            width: 100%;
+            font-weight: 600;
+        }
+
+        .connect-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .connect-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-message {
+            margin: 1.5rem 0;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .status-message.info {
+            background: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #1976d2;
+        }
+
+        .status-message.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #2e7d32;
+        }
+
+        .status-message.error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #c62828;
+        }
+
+        .status-message.warning {
+            background: #fff3e0;
+            color: #e65100;
+            border: 1px solid #e65100;
+        }
+
+        .connected-address {
+            background: #f5f5f5;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            border-radius: 20px;
+            font-weight: 600;
+            margin: 0.5rem;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+
+        .role-badge.admin {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .role-badge.hospital {
+            background: #4ecdc4;
+            color: white;
+        }
+
+        .role-badge.patient {
+            background: #45b7d1;
+            color: white;
+        }
+
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 1rem auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .alternative-login {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .alternative-login h3 {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .test-accounts {
+            text-align: left;
+            font-size: 0.85rem;
+            background: #f9f9f9;
+            padding: 1rem;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .test-accounts h4 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .test-account-item {
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .test-account-item:hover {
+            background: #e3f2fd;
+        }
+
+        .test-account-item code {
+            color: #667eea;
+            font-size: 0.75rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="login-container">
+        <div class="wallet-icon">🔐</div>
+        <div class="login-header">
+            <h1>FL-NFT Healthcare System</h1>
+            <p>Connect your wallet to access the platform</p>
+        </div>
+
+        <div id="status-message" class="status-message info" style="display:none;"></div>
+
+        <div id="not-connected-view">
+            <button id="connect-wallet-btn" class="connect-btn" onclick="connectWallet()">
+                🦊 Connect MetaMask
+            </button>
+
+            <div class="alternative-login">
+                <h3>📋 Quick Test Accounts</h3>
+                <div class="test-accounts">
+                    <h4>Admin</h4>
+                    <div class="test-account-item"
+                        onclick="showAccountInfo('0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1', 'admin')">
+                        <strong>Admin 1</strong><br>
+                        <code>0x90F8...c9C1</code>
+                    </div>
+
+                    <h4>Hospitals</h4>
+                    <div class="test-account-item"
+                        onclick="showAccountInfo('0x22d491Bde2303f2f43325b2108D26f1eAbA1e32b', 'hospital')">
+                        <strong>Metro General</strong><br>
+                        <code>0x22d4...e32b</code>
+                    </div>
+                    <div class="test-account-item"
+                        onclick="showAccountInfo('0xE11BA2b4D45Eaed5996Cd0823791E0C93114882d', 'hospital')">
+                        <strong>Regional Healthcare</strong><br>
+                        <code>0xE11B...882d</code>
+                    </div>
+
+                    <h4>Patients</h4>
+                    <div class="test-account-item"
+                        onclick="showAccountInfo('0x610Bb1573d1046FCb8A70Bbbd395754cD57C2b60', 'patient')">
+                        <strong>Patient 1</strong><br>
+                        <code>0x610B...2b60</code>
+                    </div>
+                </div>
+                <p style="margin-top: 1rem; color: #666; font-size: 0.8rem;">
+                    ℹ️ Import these addresses in MetaMask to test different roles
+                </p>
+            </div>
+        </div>
+
+        <div id="connected-view" style="display:none;">
+            <div class="status-message success">
+                ✅ Wallet Connected
+            </div>
+            <div class="connected-address" id="user-address"></div>
+            <div id="user-role"></div>
+            <div class="loading-spinner" id="loading-spinner"></div>
+            <p id="redirect-message">Redirecting to your portal...</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.8.0/dist/web3.min.js"></script>
+    <script>
+        let web3;
+        let userAddress;
+        let userRole;
+
+        // Check if user is already authenticated
+        window.addEventListener('load', async () => {
+            const savedAuth = sessionStorage.getItem('fl_auth');
+            if (savedAuth) {
+                const auth = JSON.parse(savedAuth);
+                redirectToPortal(auth.role);
+            }
+
+            // Check if MetaMask is installed
+            if (typeof window.ethereum !== 'undefined') {
+                web3 = new Web3(window.ethereum);
+            }
+        });
+
+        async function connectWallet() {
+            const statusMsg = document.getElementById('status-message');
+            const connectBtn = document.getElementById('connect-wallet-btn');
+
+            try {
+                // Check if MetaMask is installed
+                if (typeof window.ethereum === 'undefined') {
+                    showStatus('error', '❌ MetaMask not detected! Please install MetaMask extension.');
+                    return;
+                }
+
+                showStatus('info', '🔄 Requesting wallet connection...');
+                connectBtn.disabled = true;
+
+                // Request account access
+                const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+                userAddress = accounts[0];
+
+                // Check network
+                const chainId = await ethereum.request({ method: 'eth_chainId' });
+                if (chainId !== '0x539' && chainId !== '0x1337') { // 1337 in hex = 0x539
+                    showStatus('warning', '⚠️ Please switch to Localhost 7545 network in MetaMask');
+                    connectBtn.disabled = false;
+                    return;
+                }
+
+                showStatus('success', '✅ Wallet connected! Verifying your role...');
+
+                // Authenticate with backend
+                await authenticate(userAddress);
+
+            } catch (error) {
+                console.error('Connection error:', error);
+                showStatus('error', `❌ Connection failed: ${error.message}`);
+                connectBtn.disabled = false;
+            }
+        }
+
+        async function authenticate(address) {
+            try {
+                const response = await fetch('/api/auth/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ address: address })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    userRole = data.role;
+
+                    // Store authentication
+                    const authData = {
+                        address: address,
+                        role: data.role,
+                        entity_id: data.entity_id,
+                        entity_name: data.entity_name,
+                        timestamp: Date.now()
+                    };
+                    sessionStorage.setItem('fl_auth', JSON.stringify(authData));
+
+                    // Show connected view
+                    document.getElementById('not-connected-view').style.display = 'none';
+                    document.getElementById('connected-view').style.display = 'block';
+                    document.getElementById('user-address').textContent = address;
+                    document.getElementById('user-role').innerHTML =
+                        `<div class="role-badge ${data.role}">${data.role}: ${data.entity_name}</div>`;
+
+                    // Redirect after 2 seconds
+                    setTimeout(() => {
+                        redirectToPortal(data.role);
+                    }, 2000);
+
+                } else {
+                    showStatus('error', `❌ ${data.message}`);
+                    document.getElementById('connect-wallet-btn').disabled = false;
+                }
+
+            } catch (error) {
+                console.error('Authentication error:', error);
+                showStatus('error', '❌ Authentication failed. Please try again.');
+                document.getElementById('connect-wallet-btn').disabled = false;
+            }
+        }
+
+        function redirectToPortal(role) {
+            switch (role) {
+                case 'admin':
+                    window.location.href = '/training';
+                    break;
+                case 'hospital':
+                    window.location.href = '/hospital';
+                    break;
+                case 'patient':
+                    window.location.href = '/patient';
+                    break;
+                default:
+                    showStatus('error', '❌ Unknown role. Please contact administrator.');
+            }
+        }
+
+        function showStatus(type, message) {
+            const statusMsg = document.getElementById('status-message');
+            statusMsg.className = `status-message ${type}`;
+            statusMsg.textContent = message;
+            statusMsg.style.display = 'block';
+        }
+
+        function showAccountInfo(address, role) {
+            alert(`Test Account Information:\n\nAddress: ${address}\nRole: ${role}\n\nTo use this account:\n1. Copy the address\n2. Import it in MetaMask using the private key from GANACHE_AUTH_GUIDE.md\n3. Click "Connect MetaMask" button`);
+        }
+
+        // Listen for account changes
+        if (typeof window.ethereum !== 'undefined') {
+            window.ethereum.on('accountsChanged', (accounts) => {
+                if (accounts.length === 0) {
+                    // User disconnected wallet
+                    sessionStorage.removeItem('fl_auth');
+                    window.location.reload();
+                } else {
+                    // Account changed
+                    sessionStorage.removeItem('fl_auth');
+                    window.location.reload();
+                }
+            });
+
+            window.ethereum.on('chainChanged', (chainId) => {
+                // Reload page on network change
+                window.location.reload();
+            });
+        }
+    </script>
+</body>
+
+</html>
