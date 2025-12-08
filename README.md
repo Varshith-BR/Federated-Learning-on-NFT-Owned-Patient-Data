@@ -270,4 +270,4 @@ This project successfully demonstrates a working prototype of a privacy-first he
 ---
 
 **Developed for Major Project 2024**
-*Contributors: [Your Name/Team Name]*
+*Contributors:Varshith B R*
