@@ -269,5 +269,5 @@ This project successfully demonstrates a working prototype of a privacy-first he
 
 ---
 
-**Developed for Major Project 2024**
+**Developed for Major Project 2025**
 *Contributors:Varshith B R*
