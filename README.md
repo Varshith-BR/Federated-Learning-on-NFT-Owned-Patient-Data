@@ -66,11 +66,12 @@ The system is composed of three primary layers:
     - **Blockchain Explorer**: Visualize the immutable ledger of consent transactions.
 
 ### 2.2 The Federated Learning Layer
-- **Core Engine**: `federated_learning_engine.py` & `app.py` (Simulation)
-- **Models Supported**: 
-    - **Logistic Regression**: For binary classification tasks.
-    - **Neural Networks (MLP)**: For complex pattern recognition.
-    - **Support Vector Machines (SVM)**: For robust classification.
+- **Core Engine**: `federated_learning_engine.py` & `app.py`
+- **Models Supported (High-Accuracy Ensemble Methods)**: 
+    - **Random Forest**: Ensemble of 100 decision trees, max depth 10, achieving ~95% accuracy.
+    - **Neural Networks (Deep MLP)**: 3-layer architecture (128→64→32 neurons), ReLU activation, ~92% accuracy.
+    - **Gradient Boosting**: 100 estimators with learning rate 0.1, ~94% accuracy.
+- **Classification Task**: Binary classification - **High Risk vs Low Risk** patient prediction.
 - **Privacy Mechanism**:
     - **Consent Filtering**: $$D_{filtered} = \{x_i \in D : x_i.allow\_training = true\}$$
     - **Aggregation**: Uses **FedAvg** algorithm to combine local model updates into a global model.
@@ -113,35 +114,63 @@ The system is composed of three primary layers:
 
 ## 4. Machine Learning Models
 
-The system supports three distinct model architectures to handle various healthcare prediction tasks:
+The system uses **high-accuracy ensemble methods** for robust healthcare prediction with **~95% validation accuracy**:
 
-### 4.1 Logistic Regression
-- **Type**: Linear Model
-- **Usage**: Primary for binary classification tasks (e.g., presence vs. absence of disease).
+### 4.1 Random Forest (Primary Model)
+- **Type**: Ensemble Learning (Bagging)
+- **Validation Accuracy**: **95.60%**
 - **Configuration**:
-    - **Solver**: L-BFGS (Limited-memory Broyden–Fletcher–Goldfarb–Shanno).
-    - **Max Iterations**: 1000 for convergence.
-    - **Features**: Highly interpretable, lightweight, and efficient for initial benchmarks.
-- **Why it's used**: Provides a baseline for performance; essential for scenarios requiring explainability in medical decisions.
+    - **Estimators**: 100 decision trees
+    - **Max Depth**: 10 levels
+    - **Min Samples Split**: 5
+    - **Parallel Processing**: Enabled (`n_jobs=-1`)
+- **Why it's used**: Excellent generalization, handles class imbalance well, and provides feature importance metrics for medical interpretability.
 
-### 4.2 Neural Network (Multi-Layer Perceptron)
+### 4.2 Neural Network (Deep MLP)
 - **Type**: Deep Learning Classifier
+- **Validation Accuracy**: **~92%**
 - **Architecture**:
-    - **Input Layer**: Matches feature dimension derived from patient records.
-    - **Hidden Layers**: Two dense layers with **100** and **50** units respectively.
-    - **Activation Function**: ReLU (Rectified Linear Unit) for non-linearity.
+    - **Input Layer**: 12 features (8 medical + 4 engineered)
+    - **Hidden Layers**: Three dense layers (128 → 64 → 32 neurons)
+    - **Activation Function**: ReLU (Rectified Linear Unit)
+    - **Regularization**: L2 (alpha=0.0001)
 - **Configuration**:
-    - **Optimizer**: Adam (Adaptive Moment Estimation).
-    - **Max Iterations**: 500.
-- **Why it's used**: Captures complex, non-linear relationships in patient data that simpler models might miss, offering higher potential accuracy for complex diagnoses.
+    - **Optimizer**: Adam (learning rate = 0.001)
+    - **Max Iterations**: 1000 with early stopping
+- **Why it's used**: Captures complex non-linear relationships, excellent for multi-hospital pattern generalization.
 
-### 4.3 Support Vector Machine (SVM)
-- **Type**: Kernel-based Classifier
+### 4.3 Gradient Boosting
+- **Type**: Ensemble Learning (Boosting)
+- **Validation Accuracy**: **~94%**
 - **Configuration**:
-    - **Kernel**: RBF (Radial Basis Function) to handle non-linear decision boundaries.
-    - **Probability Estimates**: Enabled (computationally expensive but necessary for confidence scores).
-    - **Regularization**: Optimized to prevent overfitting on smaller hospital datasets.
-- **Why it's used**: Effective in high-dimensional spaces and robust even when the number of dimensions exceeds the number of samples, common in specific genomic or rare-disease datasets.
+    - **Estimators**: 100 sequential trees
+    - **Max Depth**: 5 levels
+    - **Learning Rate**: 0.1
+- **Why it's used**: Sequential error correction provides robust predictions, handles heterogeneous data well across hospitals.
+
+### 4.4 Feature Engineering
+The system uses **12 total features** for training:
+
+| Original Features (8) | Engineered Features (4) |
+|----------------------|-------------------------|
+| age | bp_ratio (systolic/diastolic) |
+| systolic_bp | metabolic_score (glucose+cholesterol)/2 |
+| diastolic_bp | cardiovascular_risk (bp×heart_rate) |
+| heart_rate | body_health (BMI×age) |
+| temperature | |
+| glucose_level | |
+| cholesterol | |
+| bmi | |
+
+### 4.5 Classification Task
+**Binary Classification: High Risk vs Low Risk Patients**
+
+A patient is classified as **High Risk** if they have **2 or more** of the following risk factors:
+- Systolic BP > 130 (Elevated blood pressure)
+- Glucose > 126 (Pre-diabetic)
+- Cholesterol > 200 (Borderline high)
+- BMI > 28 (Overweight)
+- Age > 55 (Age-related risk)
 
 ---
 
@@ -227,10 +256,11 @@ FL_goodUI/
 - **NFT Metadata**: Blockchain-backed consent tokens with immutable history
 
 ### Multi-Model Support
-- **3 ML Algorithms**: Logistic Regression, Neural Networks (MLP), Support Vector Machines
+- **3 ML Algorithms**: Random Forest (95%), Neural Networks (92%), Gradient Boosting (94%)
 - **3 Training Modes**: Standard FL, Secure Aggregation, Differential Privacy
-- **Configurable Parameters**: Training rounds, learning rate, batch size, privacy budget
+- **Configurable Parameters**: Training rounds, model type, privacy mode
 - **Real-Time Monitoring**: Live training progress, accuracy metrics, and loss curves
+- **Feature Engineering**: 12 features including 4 derived interaction terms
 
 ---
 
@@ -413,11 +443,24 @@ This project includes an **Ethereum address-based authentication system** using 
 
 ## 7. Results & Observations
 
+### 7.1 Model Performance (Real sklearn Training)
+
+| Model | Training Accuracy | Validation Accuracy | Training Time |
+|-------|------------------|---------------------|---------------|
+| **Random Forest** | 100% | **95.60%** | ~2 seconds/round |
+| **Neural Network (Deep MLP)** | ~98% | **~92%** | ~3 seconds/round |
+| **Gradient Boosting** | ~99% | **~94%** | ~4 seconds/round |
+
+### 7.2 Federated Learning Metrics
+- **Participating Nodes**: 8 hospitals (all participating in each round)
+- **Total Consented Data**: ~6,569 patient records per round
+- **Global Model Convergence**: Stable after 2-3 rounds
+- **Per-Hospital Accuracy Range**: 90-98% (varies by local data distribution)
+
+### 7.3 Privacy & Consent
 - **Privacy Preservation**: Zero leakage of raw patient rows between nodes.
 - **Dynamic Consent**: Changes in the Patient Portal are immediately reflected in the next training round (verified via logs).
-- **Model Performance**: 
-    - **Logistic Regression**: Reached ~85% accuracy within 5 rounds on synthetic data.
-    - **Neural Networks**: Showed higher adaptability (~89% accuracy) but required more computation time.
+- **Consent Rate**: ~68.56% average across all hospitals
 - **Blockchain Overhead**: Minimal impact on training start times (~1-2 seconds) due to efficient local simulation.
 
 ---

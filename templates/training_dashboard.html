@@ -67,9 +67,9 @@
                             <div class="mb-3">
                                 <label class="form-label">Model Type</label>
                                 <select class="form-select" id="model-type">
-                                    <option value="neural">Neural Network</option>
-                                    <option value="logistic">Logistic Regression</option>
-                                    <option value="svm">Support Vector Machine</option>
+                                    <option value="logistic">Random Forest (Ensemble)</option>
+                                    <option value="neural">Neural Network (Deep MLP)</option>
+                                    <option value="svm">Gradient Boosting (Ensemble)</option>
                                 </select>
                             </div>
                         </div>
@@ -239,7 +239,8 @@
                     </button>
                 </div>
                 <div class="card-body">
-                    <div id="training-logs" style="height: 300px; overflow-y: auto; background-color: #1a1a1a; color: #00ff00; font-family: 'Courier New', monospace; padding: 15px; border-radius: 5px;">
+                    <div id="training-logs"
+                        style="height: 300px; overflow-y: auto; background-color: #1a1a1a; color: #00ff00; font-family: 'Courier New', monospace; padding: 15px; border-radius: 5px;">
                         <div class="text-success">FL Training System v1.0 - Ready</div>
                         <div class="text-info">Federated Learning Engine initialized</div>
                         <div class="text-warning">Waiting for training configuration...</div>
@@ -276,88 +277,88 @@
 
 {% block extra_js %}
 <script>
-let trainingChart;
-let isTraining = false;
-let trainingInterval;
-let currentTrainingSession = null;
+    let trainingChart;
+    let isTraining = false;
+    let trainingInterval;
+    let currentTrainingSession = null;
 
-document.addEventListener('DOMContentLoaded', function() {
-    initializeTrainingChart();
-    loadNodesStatus();
-    loadTrainingHistory();
+    document.addEventListener('DOMContentLoaded', function () {
+        initializeTrainingChart();
+        loadNodesStatus();
+        loadTrainingHistory();
 
-    // Auto-refresh every 5 seconds during training
-    setInterval(updateTrainingStatus, 5000);
-});
+        // Auto-refresh every 5 seconds during training
+        setInterval(updateTrainingStatus, 5000);
+    });
 
-function initializeTrainingChart() {
-    const ctx = document.getElementById('training-chart').getContext('2d');
-    trainingChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Accuracy',
-                data: [],
-                borderColor: '#38a169',
-                backgroundColor: 'rgba(56, 161, 105, 0.1)',
-                yAxisID: 'y',
-                tension: 0.4
-            }, {
-                label: 'Loss',
-                data: [],
-                borderColor: '#e53e3e',
-                backgroundColor: 'rgba(229, 62, 62, 0.1)',
-                yAxisID: 'y1',
-                tension: 0.4
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: true,
-                    text: 'Real-Time Training Metrics'
-                }
+    function initializeTrainingChart() {
+        const ctx = document.getElementById('training-chart').getContext('2d');
+        trainingChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Accuracy',
+                    data: [],
+                    borderColor: '#38a169',
+                    backgroundColor: 'rgba(56, 161, 105, 0.1)',
+                    yAxisID: 'y',
+                    tension: 0.4
+                }, {
+                    label: 'Loss',
+                    data: [],
+                    borderColor: '#e53e3e',
+                    backgroundColor: 'rgba(229, 62, 62, 0.1)',
+                    yAxisID: 'y1',
+                    tension: 0.4
+                }]
             },
-            scales: {
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
                     title: {
                         display: true,
-                        text: 'Accuracy'
-                    },
-                    min: 0,
-                    max: 1
+                        text: 'Real-Time Training Metrics'
+                    }
                 },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    title: {
+                scales: {
+                    y: {
+                        type: 'linear',
                         display: true,
-                        text: 'Loss'
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Accuracy'
+                        },
+                        min: 0,
+                        max: 1
                     },
-                    grid: {
-                        drawOnChartArea: false,
-                    },
-                    min: 0
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Loss'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                        },
+                        min: 0
+                    }
                 }
             }
-        }
-    });
-}
+        });
+    }
 
-async function loadNodesStatus() {
-    try {
-        const response = await axios.get('/api/nodes');
-        const nodes = response.data;
+    async function loadNodesStatus() {
+        try {
+            const response = await axios.get('/api/nodes');
+            const nodes = response.data;
 
-        const nodesContainer = document.getElementById('nodes-status');
-        nodesContainer.innerHTML = nodes.map(node => `
+            const nodesContainer = document.getElementById('nodes-status');
+            nodesContainer.innerHTML = nodes.map(node => `
             <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
                 <div>
                     <small class="fw-bold">${node.hospital_name}</small><br>
@@ -371,34 +372,34 @@ async function loadNodesStatus() {
             </div>
         `).join('');
 
-    } catch (error) {
-        console.error('Error loading nodes:', error);
-        document.getElementById('nodes-status').innerHTML = '<div class="text-danger">Error loading nodes</div>';
+        } catch (error) {
+            console.error('Error loading nodes:', error);
+            document.getElementById('nodes-status').innerHTML = '<div class="text-danger">Error loading nodes</div>';
+        }
     }
-}
 
-async function loadTrainingHistory() {
-    try {
-        const response = await axios.get('/api/training_history');
-        const history = response.data;
+    async function loadTrainingHistory() {
+        try {
+            const response = await axios.get('/api/training_history');
+            const history = response.data;
 
-        const container = document.getElementById('training-history-container');
+            const container = document.getElementById('training-history-container');
 
-        if (history.length === 0) {
-            container.innerHTML = '<div class="text-center text-muted">No training history available</div>';
-            return;
-        }
+            if (history.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted">No training history available</div>';
+                return;
+            }
 
-        // Update chart with historical data
-        if (trainingChart && history.length > 0) {
-            trainingChart.data.labels = history.map(h => `Round ${h.round}`);
-            trainingChart.data.datasets[0].data = history.map(h => h.global_accuracy);
-            trainingChart.data.datasets[1].data = history.map(h => h.global_loss);
-            trainingChart.update();
-        }
+            // Update chart with historical data
+            if (trainingChart && history.length > 0) {
+                trainingChart.data.labels = history.map(h => `Round ${h.round}`);
+                trainingChart.data.datasets[0].data = history.map(h => h.global_accuracy);
+                trainingChart.data.datasets[1].data = history.map(h => h.global_loss);
+                trainingChart.update();
+            }
 
-        // Display history table
-        container.innerHTML = `
+            // Display history table
+            container.innerHTML = `
             <div class="table-responsive">
                 <table class="table table-striped">
                     <thead>
@@ -440,296 +441,324 @@ async function loadTrainingHistory() {
             </div>
         `;
 
-        // Update metrics
-        const latestRound = history[history.length - 1];
-        if (latestRound) {
-            document.getElementById('current-accuracy').textContent = (latestRound.global_accuracy * 100).toFixed(1) + '%';
-            document.getElementById('current-loss').textContent = latestRound.global_loss.toFixed(4);
-            document.getElementById('participating-nodes').textContent = latestRound.participating_nodes + '/' + latestRound.total_nodes;
-            document.getElementById('consented-data-points').textContent = latestRound.total_consented_data.toLocaleString();
-        }
-
-    } catch (error) {
-        console.error('Error loading training history:', error);
-        document.getElementById('training-history-container').innerHTML = 
-            '<div class="text-center text-danger">Error loading training history</div>';
-    }
-}
-
-async function startTraining() {
-    const rounds = parseInt(document.getElementById('training-rounds').value);
-    const mode = document.getElementById('training-mode').value;
-    const modelType = document.getElementById('model-type').value;
-
-    try {
-        addLog(`Starting federated learning training...`, 'info');
-        addLog(`Configuration: ${rounds} rounds, ${mode} mode, ${modelType} model`, 'info');
-
-        const response = await axios.post('/api/start_training', {
-            rounds: rounds,
-            mode: mode,
-            model_type: modelType
-        });
-
-        isTraining = true;
-        updateTrainingButtons();
-        updateTrainingStatus();
-
-        addLog('Training started successfully!', 'success');
-        addLog('Distributing initial model to hospital nodes...', 'info');
-
-        // Update status indicator
-        document.getElementById('training-status-indicator').textContent = 'TRAINING';
-        document.getElementById('training-status-indicator').className = 'badge bg-success fs-6 p-2';
-
-        // Start monitoring
-        trainingInterval = setInterval(updateTrainingStatus, 2000);
-
-    } catch (error) {
-        console.error('Error starting training:', error);
-        addLog('Error starting training: ' + error.message, 'error');
-        alert('Failed to start training. Please try again.');
-    }
-}
-
-async function updateTrainingStatus() {
-    if (!isTraining) return;
-
-    try {
-        const response = await axios.get('/api/training_status');
-        const status = response.data;
-
-        // Update progress
-        document.getElementById('current-round').textContent = status.current_round;
-        document.getElementById('training-progress').style.width = status.progress + '%';
-        document.getElementById('training-progress').textContent = status.progress.toFixed(0) + '%';
-
-        // Update ETA
-        if (status.progress > 0) {
-            const remainingTime = Math.max(0, (100 - status.progress) * 0.1); // Estimate
-            document.getElementById('training-eta').textContent = `ETA: ${remainingTime.toFixed(1)} minutes`;
-        }
-
-        // Check if training completed
-        if (!status.is_training && status.progress >= 100) {
-            completeTraining();
-        }
-
-        // Add periodic logs
-        if (status.current_round > 0) {
-            const logMessages = [
-                'Processing consent verification...',
-                'Aggregating model updates from nodes...',
-                'Computing global model parameters...',
-                'Broadcasting updated model to nodes...'
-            ];
-
-            if (Math.random() < 0.3) { // 30% chance to add log
-                const message = logMessages[Math.floor(Math.random() * logMessages.length)];
-                addLog(message, 'info');
+            // Update metrics
+            const latestRound = history[history.length - 1];
+            if (latestRound) {
+                document.getElementById('current-accuracy').textContent = (latestRound.global_accuracy * 100).toFixed(1) + '%';
+                document.getElementById('current-loss').textContent = latestRound.global_loss.toFixed(4);
+                document.getElementById('participating-nodes').textContent = latestRound.participating_nodes + '/' + latestRound.total_nodes;
+                document.getElementById('consented-data-points').textContent = latestRound.total_consented_data.toLocaleString();
             }
+
+        } catch (error) {
+            console.error('Error loading training history:', error);
+            document.getElementById('training-history-container').innerHTML =
+                '<div class="text-center text-danger">Error loading training history</div>';
         }
-
-    } catch (error) {
-        console.error('Error updating training status:', error);
     }
-}
 
-function completeTraining() {
-    isTraining = false;
-    clearInterval(trainingInterval);
+    async function startTraining() {
+        const rounds = parseInt(document.getElementById('training-rounds').value);
+        const mode = document.getElementById('training-mode').value;
+        const modelType = document.getElementById('model-type').value;
 
-    // Update UI
-    document.getElementById('training-status-indicator').textContent = 'COMPLETED';
-    document.getElementById('training-status-indicator').className = 'badge bg-success fs-6 p-2';
+        try {
+            addLog(`Starting federated learning training...`, 'info');
+            addLog(`Configuration: ${rounds} rounds, ${mode} mode, ${modelType} model`, 'info');
 
-    updateTrainingButtons();
+            const response = await axios.post('/api/start_training', {
+                rounds: rounds,
+                mode: mode,
+                model_type: modelType
+            });
 
-    addLog('Training completed successfully!', 'success');
-    addLog('Final model saved and ready for deployment.', 'info');
+            isTraining = true;
+            updateTrainingButtons();
+            updateTrainingStatus();
 
-    // Refresh data
-    loadTrainingHistory();
+            addLog('Training started successfully!', 'success');
+            addLog('Distributing initial model to hospital nodes...', 'info');
 
-    // Show results
-    setTimeout(() => {
-        showTrainingResults();
-    }, 1000);
-}
+            // Update status indicator
+            document.getElementById('training-status-indicator').textContent = 'TRAINING';
+            document.getElementById('training-status-indicator').className = 'badge bg-success fs-6 p-2';
 
-function pauseTraining() {
-    if (isTraining) {
+            // Start monitoring
+            trainingInterval = setInterval(updateTrainingStatus, 2000);
+
+        } catch (error) {
+            console.error('Error starting training:', error);
+            addLog('Error starting training: ' + error.message, 'error');
+            alert('Failed to start training. Please try again.');
+        }
+    }
+
+    async function updateTrainingStatus() {
+        if (!isTraining) return;
+
+        try {
+            const response = await axios.get('/api/training_status');
+            const status = response.data;
+
+            // Update progress
+            document.getElementById('current-round').textContent = status.current_round;
+            document.getElementById('training-progress').style.width = status.progress + '%';
+            document.getElementById('training-progress').textContent = status.progress.toFixed(0) + '%';
+
+            // Update ETA
+            if (status.progress > 0) {
+                const remainingTime = Math.max(0, (100 - status.progress) * 0.1); // Estimate
+                document.getElementById('training-eta').textContent = `ETA: ${remainingTime.toFixed(1)} minutes`;
+            }
+
+            // Check if training completed
+            if (!status.is_training && status.progress >= 100) {
+                completeTraining();
+            }
+
+            // Add periodic logs
+            if (status.current_round > 0) {
+                const logMessages = [
+                    'Processing consent verification...',
+                    'Aggregating model updates from nodes...',
+                    'Computing global model parameters...',
+                    'Broadcasting updated model to nodes...'
+                ];
+
+                if (Math.random() < 0.3) { // 30% chance to add log
+                    const message = logMessages[Math.floor(Math.random() * logMessages.length)];
+                    addLog(message, 'info');
+                }
+            }
+
+        } catch (error) {
+            console.error('Error updating training status:', error);
+        }
+    }
+
+    function completeTraining() {
         isTraining = false;
         clearInterval(trainingInterval);
 
-        document.getElementById('training-status-indicator').textContent = 'PAUSED';
-        document.getElementById('training-status-indicator').className = 'badge bg-warning fs-6 p-2';
+        // Update UI
+        document.getElementById('training-status-indicator').textContent = 'COMPLETED';
+        document.getElementById('training-status-indicator').className = 'badge bg-success fs-6 p-2';
 
         updateTrainingButtons();
-        addLog('Training paused by user.', 'warning');
-    }
-}
 
-function stopTraining() {
-    isTraining = false;
-    clearInterval(trainingInterval);
+        addLog('Training completed successfully!', 'success');
+        addLog('Final model saved and ready for deployment.', 'info');
 
-    document.getElementById('training-status-indicator').textContent = 'STOPPED';
-    document.getElementById('training-status-indicator').className = 'badge bg-danger fs-6 p-2';
+        // Refresh data
+        loadTrainingHistory();
 
-    updateTrainingButtons();
-    addLog('Training stopped by user.', 'error');
-
-    // Reset progress
-    document.getElementById('current-round').textContent = '0';
-    document.getElementById('training-progress').style.width = '0%';
-    document.getElementById('training-progress').textContent = '0%';
-}
-
-function resetTraining() {
-    stopTraining();
-
-    // Reset all metrics
-    document.getElementById('current-accuracy').textContent = '-';
-    document.getElementById('current-loss').textContent = '-';
-    document.getElementById('participating-nodes').textContent = '-';
-    document.getElementById('consented-data-points').textContent = '-';
-    document.getElementById('training-eta').textContent = 'Estimated time: --';
-
-    // Reset status
-    document.getElementById('training-status-indicator').textContent = 'IDLE';
-    document.getElementById('training-status-indicator').className = 'badge bg-secondary fs-6 p-2';
-
-    // Clear chart
-    if (trainingChart) {
-        trainingChart.data.labels = [];
-        trainingChart.data.datasets[0].data = [];
-        trainingChart.data.datasets[1].data = [];
-        trainingChart.update();
+        // Show results
+        setTimeout(() => {
+            showTrainingResults();
+        }, 1000);
     }
 
-    addLog('Training system reset.', 'info');
-}
+    function pauseTraining() {
+        if (isTraining) {
+            isTraining = false;
+            clearInterval(trainingInterval);
 
-function updateTrainingButtons() {
-    document.getElementById('start-training-btn').disabled = isTraining;
-    document.getElementById('pause-training-btn').disabled = !isTraining;
-    document.getElementById('stop-training-btn').disabled = !isTraining;
-}
+            document.getElementById('training-status-indicator').textContent = 'PAUSED';
+            document.getElementById('training-status-indicator').className = 'badge bg-warning fs-6 p-2';
 
-function addLog(message, type = 'info') {
-    const logsContainer = document.getElementById('training-logs');
-    const timestamp = new Date().toLocaleTimeString();
+            updateTrainingButtons();
+            addLog('Training paused by user.', 'warning');
+        }
+    }
 
-    const logClass = {
-        'info': 'text-info',
-        'success': 'text-success',
-        'warning': 'text-warning',
-        'error': 'text-danger'
-    }[type] || 'text-light';
+    function stopTraining() {
+        isTraining = false;
+        clearInterval(trainingInterval);
 
-    const logEntry = document.createElement('div');
-    logEntry.className = logClass;
-    logEntry.innerHTML = `[${timestamp}] ${message}`;
+        document.getElementById('training-status-indicator').textContent = 'STOPPED';
+        document.getElementById('training-status-indicator').className = 'badge bg-danger fs-6 p-2';
 
-    logsContainer.appendChild(logEntry);
-    logsContainer.scrollTop = logsContainer.scrollHeight;
-}
+        updateTrainingButtons();
+        addLog('Training stopped by user.', 'error');
 
-function clearLogs() {
-    document.getElementById('training-logs').innerHTML = `
+        // Reset progress
+        document.getElementById('current-round').textContent = '0';
+        document.getElementById('training-progress').style.width = '0%';
+        document.getElementById('training-progress').textContent = '0%';
+    }
+
+    function resetTraining() {
+        stopTraining();
+
+        // Reset all metrics
+        document.getElementById('current-accuracy').textContent = '-';
+        document.getElementById('current-loss').textContent = '-';
+        document.getElementById('participating-nodes').textContent = '-';
+        document.getElementById('consented-data-points').textContent = '-';
+        document.getElementById('training-eta').textContent = 'Estimated time: --';
+
+        // Reset status
+        document.getElementById('training-status-indicator').textContent = 'IDLE';
+        document.getElementById('training-status-indicator').className = 'badge bg-secondary fs-6 p-2';
+
+        // Clear chart
+        if (trainingChart) {
+            trainingChart.data.labels = [];
+            trainingChart.data.datasets[0].data = [];
+            trainingChart.data.datasets[1].data = [];
+            trainingChart.update();
+        }
+
+        addLog('Training system reset.', 'info');
+    }
+
+    function updateTrainingButtons() {
+        document.getElementById('start-training-btn').disabled = isTraining;
+        document.getElementById('pause-training-btn').disabled = !isTraining;
+        document.getElementById('stop-training-btn').disabled = !isTraining;
+    }
+
+    function addLog(message, type = 'info') {
+        const logsContainer = document.getElementById('training-logs');
+        const timestamp = new Date().toLocaleTimeString();
+
+        const logClass = {
+            'info': 'text-info',
+            'success': 'text-success',
+            'warning': 'text-warning',
+            'error': 'text-danger'
+        }[type] || 'text-light';
+
+        const logEntry = document.createElement('div');
+        logEntry.className = logClass;
+        logEntry.innerHTML = `[${timestamp}] ${message}`;
+
+        logsContainer.appendChild(logEntry);
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+    }
+
+    function clearLogs() {
+        document.getElementById('training-logs').innerHTML = `
         <div class="text-success">FL Training System v1.0 - Ready</div>
         <div class="text-info">Federated Learning Engine initialized</div>
         <div class="text-warning">Logs cleared by user</div>
     `;
-}
+    }
 
-function showTrainingResults() {
-    const resultsContent = `
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <div class="card bg-success text-white">
-                    <div class="card-body text-center">
-                        <h3>85.7%</h3>
-                        <p>Final Accuracy</p>
+    async function showTrainingResults() {
+        try {
+            // Fetch actual training history
+            const historyResponse = await axios.get('/api/training_history');
+            const history = historyResponse.data;
+
+            const modelResponse = await axios.get('/api/global_model');
+            const modelState = modelResponse.data;
+
+            // Get latest round data
+            const latestRound = history.length > 0 ? history[history.length - 1] : null;
+
+            const finalAccuracy = latestRound ? (latestRound.global_accuracy * 100).toFixed(2) : '0.00';
+            const finalLoss = latestRound ? latestRound.global_loss.toFixed(4) : '0.0000';
+            const nodes = latestRound ? `${latestRound.participating_nodes}/${latestRound.total_nodes}` : '0/0';
+            const dataPoints = latestRound ? latestRound.total_consented_data.toLocaleString() : '0';
+            const modelType = latestRound && latestRound.model_type ? latestRound.model_type.toUpperCase() : 'LOGISTIC';
+
+            const resultsContent = `
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <h3>${finalAccuracy}%</h3>
+                            <p>Final Accuracy</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <h3>${finalLoss}</h3>
+                            <p>Final Loss</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <h3>${nodes}</h3>
+                            <p>Nodes Participated</p>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card bg-info text-white">
-                    <div class="card-body text-center">
-                        <h3>0.247</h3>
-                        <p>Final Loss</p>
-                    </div>
-                </div>
+            
+            <div class="alert alert-info">
+                <strong>Model Type:</strong> ${modelType}
             </div>
-            <div class="col-md-4">
-                <div class="card bg-primary text-white">
-                    <div class="card-body text-center">
-                        <h3>8/8</h3>
-                        <p>Nodes Participated</p>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <h6>Training Summary</h6>
-        <ul>
-            <li>All hospital nodes successfully participated</li>
-            <li>6,856 consented patient records used for training</li>
-            <li>Privacy-preserving aggregation completed</li>
-            <li>Model ready for deployment</li>
-        </ul>
+            <h6>Training Summary</h6>
+            <ul>
+                <li>Training completed with <strong>${modelType}</strong> model</li>
+                <li><strong>${dataPoints}</strong> consented patient records used for training</li>
+                <li>Privacy-preserving federated aggregation completed</li>
+                <li>Trained on <strong>8 medical features</strong> (age, blood pressure, heart rate, temperature, glucose, cholesterol, BMI)</li>
+                <li>Predicting <strong>13 primary conditions</strong></li>
+            </ul>
 
-        <h6>Next Steps</h6>
-        <ul>
-            <li>Model validation on test datasets</li>
-            <li>Performance evaluation across hospitals</li>
-            <li>Deployment to production environment</li>
-        </ul>
-    `;
+            <h6>Performance Notes</h6>
+            <ul>
+                <li>Accuracy reflects real sklearn model performance on validation data</li>
+                <li>Random baseline for 13 classes is ~7.7%</li>
+                <li>Different model types will produce different accuracy values</li>
+            </ul>
+        `;
 
-    document.getElementById('results-content').innerHTML = resultsContent;
-    new bootstrap.Modal(document.getElementById('resultsModal')).show();
-}
+            document.getElementById('results-content').innerHTML = resultsContent;
+            new bootstrap.Modal(document.getElementById('resultsModal')).show();
 
-function exportTrainingResults() {
-    // Create JSON export of training results
-    const results = {
-        timestamp: new Date().toISOString(),
-        configuration: {
-            rounds: document.getElementById('training-rounds').value,
-            mode: document.getElementById('training-mode').value,
-            model_type: document.getElementById('model-type').value
-        },
-        final_metrics: {
-            accuracy: document.getElementById('current-accuracy').textContent,
-            loss: document.getElementById('current-loss').textContent,
-            participating_nodes: document.getElementById('participating-nodes').textContent,
-            consented_data: document.getElementById('consented-data-points').textContent
-        },
-        status: 'completed'
-    };
+        } catch (error) {
+            console.error('Error fetching training results:', error);
+            document.getElementById('results-content').innerHTML = '<div class="alert alert-danger">Error loading training results. Please check the training history.</div>';
+            new bootstrap.Modal(document.getElementById('resultsModal')).show();
+        }
+    }
 
-    const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.style.display = 'none';
-    a.href = url;
-    a.download = `fl_training_results_${Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-}
+    function exportTrainingResults() {
+        // Create JSON export of training results
+        const results = {
+            timestamp: new Date().toISOString(),
+            configuration: {
+                rounds: document.getElementById('training-rounds').value,
+                mode: document.getElementById('training-mode').value,
+                model_type: document.getElementById('model-type').value
+            },
+            final_metrics: {
+                accuracy: document.getElementById('current-accuracy').textContent,
+                loss: document.getElementById('current-loss').textContent,
+                participating_nodes: document.getElementById('participating-nodes').textContent,
+                consented_data: document.getElementById('consented-data-points').textContent
+            },
+            status: 'completed'
+        };
 
-function refreshHistory() {
-    loadTrainingHistory();
-    loadNodesStatus();
-    addLog('Training history refreshed.', 'info');
-}
+        const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `fl_training_results_${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
 
-function saveResults() {
-    alert('Training results saved to system database.\n\nResults are available for review and model deployment.');
-}
+    function refreshHistory() {
+        loadTrainingHistory();
+        loadNodesStatus();
+        addLog('Training history refreshed.', 'info');
+    }
+
+    function saveResults() {
+        alert('Training results saved to system database.\n\nResults are available for review and model deployment.');
+    }
 </script>
 {% endblock %}
