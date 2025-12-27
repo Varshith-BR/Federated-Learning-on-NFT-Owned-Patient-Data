@@ -331,7 +331,9 @@ def require_auth(allowed_roles=None):
             
             # Check role if specified
             if allowed_roles and auth_data.get('role') not in allowed_roles:
-                return jsonify({'error': 'Unauthorized access'}), 403
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({'error': 'Unauthorized access'}), 403
+                return render_template('not_authorized.html'), 403
             
             return f(*args, **kwargs)
         return decorated_function
@@ -351,10 +353,10 @@ def home():
     
     # Redirect based on role
     role = auth_data.get('role')
-    if role == 'admin':
-        return redirect(url_for('training_dashboard'))
-    elif role == 'hospital':
-        return redirect(url_for('training_dashboard'))  # Hospital now has access to training dashboard
+    dashboard_roles = ['admin', 'hospital', 'researcher']
+    
+    if role in dashboard_roles:
+        return redirect(url_for('dashboard'))
     elif role == 'patient':
         return redirect(url_for('patient_portal'))
     else:
@@ -434,9 +436,9 @@ def check_auth_address():
     return jsonify({'valid': True, 'role': auth_data.get('role')})
 
 @app.route('/dashboard')
-@require_auth()
+@require_auth(allowed_roles=['admin', 'hospital', 'researcher'])
 def dashboard():
-    """Main dashboard - admin only"""
+    """Main dashboard - admin, hospital, researcher"""
     return render_template('dashboard.html')
 
 @app.route('/patient')
