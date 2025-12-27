@@ -67,9 +67,8 @@
                             <div class="mb-3">
                                 <label class="form-label">Model Type</label>
                                 <select class="form-select" id="model-type">
-                                    <option value="logistic">Random Forest (Ensemble)</option>
-                                    <option value="neural">Neural Network (Deep MLP)</option>
-                                    <option value="svm">Gradient Boosting (Ensemble)</option>
+                                    <option value="random_forest">Random Forest (Ensemble)</option>
+                                    <option value="mlp">Neural Network (Deep MLP)</option>
                                 </select>
                             </div>
                         </div>
@@ -661,7 +660,7 @@
             const finalLoss = latestRound ? latestRound.global_loss.toFixed(4) : '0.0000';
             const nodes = latestRound ? `${latestRound.participating_nodes}/${latestRound.total_nodes}` : '0/0';
             const dataPoints = latestRound ? latestRound.total_consented_data.toLocaleString() : '0';
-            const modelType = latestRound && latestRound.model_type ? latestRound.model_type.toUpperCase() : 'LOGISTIC';
+            const modelType = latestRound && latestRound.model_type ? latestRound.model_type.toUpperCase() : 'RANDOM FOREST';
 
             const resultsContent = `
             <div class="row mb-4">

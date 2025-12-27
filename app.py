@@ -95,9 +95,8 @@ class FederatedLearningEngine:
         Uses BINARY CLASSIFICATION (High Risk vs Low Risk) with ensemble models
         and feature engineering for high accuracy (85-95%).
         """
-        from sklearn.linear_model import LogisticRegression
         from sklearn.neural_network import MLPClassifier
-        from sklearn.svm import SVC
+        from sklearn.ensemble import RandomForestClassifier
         from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
         from sklearn.preprocessing import StandardScaler, PolynomialFeatures
         from sklearn.model_selection import train_test_split
@@ -151,36 +150,27 @@ class FederatedLearningEngine:
             X_scaled = scaler.fit_transform(X)
             
             # Split data with stratification
+            # Split data with stratification - randomness enabled (removed fixed seed)
             X_train, X_val, y_train, y_val = train_test_split(
-                X_scaled, y, test_size=0.2, random_state=42, stratify=y
+                X_scaled, y, test_size=0.2, stratify=y
             )
             
             # Select model based on type - using ensemble methods for higher accuracy
-            if model_type == 'neural':
+            if model_type == 'mlp':
                 # Deep neural network with optimized architecture
                 model = MLPClassifier(
                     hidden_layer_sizes=(128, 64, 32), 
-                    random_state=42, 
                     max_iter=1000, 
                     early_stopping=True,
                     learning_rate_init=0.001,
                     alpha=0.0001,
                     activation='relu'
                 )
-            elif model_type == 'svm':
-                # Use Gradient Boosting for "SVM" option - much better accuracy
-                model = GradientBoostingClassifier(
-                    n_estimators=100,
-                    max_depth=5,
-                    learning_rate=0.1,
-                    random_state=42
-                )
-            else:  # logistic - use Random Forest for high accuracy
+            else:  # random_forest is default
                 model = RandomForestClassifier(
                     n_estimators=100,
                     max_depth=10,
                     min_samples_split=5,
-                    random_state=42,
                     n_jobs=-1
                 )
             
@@ -199,9 +189,8 @@ class FederatedLearningEngine:
             low_risk_count = len(y) - high_risk_count
             
             model_display_name = {
-                'logistic': 'RANDOM FOREST',
-                'neural': 'NEURAL NETWORK', 
-                'svm': 'GRADIENT BOOSTING'
+                'random_forest': 'RANDOM FOREST',
+                'mlp': 'NEURAL NETWORK'
             }.get(model_type, model_type.upper())
             
             print(f"[{model_display_name}] Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}, Samples: {len(filtered_data)} (High Risk: {high_risk_count}, Low Risk: {low_risk_count})")
@@ -224,7 +213,7 @@ class FederatedLearningEngine:
             print(f"Training error: {str(e)}")
             return None, 0
 
-    def federated_training_round(self, model_type='logistic'):
+    def federated_training_round(self, model_type='random_forest'):
         """Execute one round of federated training with real ML models"""
         participating_nodes = 0
         total_consented_data = 0
@@ -267,9 +256,8 @@ class FederatedLearningEngine:
 
         # Get the display name for the model
         model_display_names = {
-            'logistic': 'Random Forest',
-            'neural': 'Neural Network', 
-            'svm': 'Gradient Boosting'
+            'random_forest': 'Random Forest',
+            'mlp': 'Neural Network'
         }
         display_name = model_display_names.get(model_type, model_type)
 
@@ -551,15 +539,17 @@ def start_training():
 
     data = request.json
     num_rounds = data.get('rounds', 3)
-    model_type = data.get('model_type', 'logistic')  # Accept model type: 'logistic', 'neural', 'svm'
+    model_type = data.get('model_type', 'random_forest')  # Accept model type: 'random_forest', 'mlp'
 
     if training_status['is_training']:
         return jsonify({'error': 'Training already in progress'}), 400
 
     # Validate model type
-    valid_models = ['logistic', 'neural', 'svm']
+    valid_models = ['random_forest', 'mlp']
     if model_type not in valid_models:
-        model_type = 'logistic'
+        model_type = 'random_forest' # Default to Random Forest
+        
+    print(f"DEBUG: Starting training with model_type: {model_type}")
 
     training_status.update({
         'is_training': True,

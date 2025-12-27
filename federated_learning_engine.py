@@ -1,10 +1,7 @@
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.neural_network import MLPClassifier
-from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import joblib
@@ -21,7 +18,7 @@ import time
 class FederatedModel:
     """Base class for federated learning models"""
 
-    def __init__(self, model_type: str = 'logistic'):
+    def __init__(self, model_type: str = 'random_forest'):
         self.model_type = model_type
         self.model = None
         self.scaler = StandardScaler()
@@ -33,12 +30,12 @@ class FederatedModel:
 
     def _initialize_model(self):
         """Initialize the appropriate model"""
-        if self.model_type == 'logistic':
-            self.model = LogisticRegression(random_state=42, max_iter=1000)
-        elif self.model_type == 'neural':
-            self.model = MLPClassifier(hidden_layer_sizes=(100, 50), random_state=42, max_iter=500)
-        elif self.model_type == 'svm':
-            self.model = SVC(kernel='rbf', random_state=42, probability=True)
+        if self.model_type == 'random_forest':
+            # Random Forest (Ensemble) - 100 Trees
+            self.model = RandomForestClassifier(n_estimators=100, criterion='gini')
+        elif self.model_type == 'mlp':
+            # Neural Network (Deep MLP) - 128-64-32
+            self.model = MLPClassifier(hidden_layer_sizes=(128, 64, 32), activation='relu', solver='adam', max_iter=500)
         else:
             raise ValueError(f"Unsupported model type: {self.model_type}")
 
@@ -91,13 +88,13 @@ class FederatedModel:
         if not self.is_fitted:
             raise ValueError("Model must be fitted before extracting parameters")
 
-        if self.model_type == 'logistic':
+        if self.model_type == 'random_forest':
             return {
-                'coef_': self.model.coef_.copy(),
-                'intercept_': self.model.intercept_.copy(),
-                'classes_': self.model.classes_.copy()
+                'estimators_': self.model.estimators_,
+                'n_classes_': self.model.n_classes_,
+                'classes_': self.model.classes_
             }
-        elif self.model_type == 'neural':
+        elif self.model_type == 'mlp':
             return {
                 'coefs_': [coef.copy() for coef in self.model.coefs_],
                 'intercepts_': [intercept.copy() for intercept in self.model.intercepts_],
@@ -114,16 +111,30 @@ class FederatedModel:
 
     def set_parameters(self, parameters: dict):
         """Set model parameters from federated averaging"""
-        if self.model_type == 'logistic':
-            self.model.coef_ = parameters['coef_']
-            self.model.intercept_ = parameters['intercept_']
-            self.model.classes_ = parameters['classes_']
-        elif self.model_type == 'neural':
-            self.model.coefs_ = parameters['coefs_']
-            self.model.intercepts_ = parameters['intercepts_']
-            self.model.classes_ = parameters['classes_']
-        # SVM parameter setting is more complex and model-dependent
+        if self.model_type == 'random_forest':
+             # In a real FL Random Forest, we aggregate trees from all nodes
+             # parameters['estimators_'] is a list of trees from all nodes
+             if 'estimators_' in parameters:
+                 self.model.estimators_ = parameters['estimators_']
+                 self.model.n_estimators = len(self.model.estimators_)
+             if 'classes_' in parameters:
+                 self.model.classes_ = parameters['classes_']
+                 self.model.n_classes_ = len(self.model.classes_)
 
+        elif self.model_type == 'mlp':
+            # Set coefficients and intercepts
+            if 'coefs_' in parameters and 'intercepts_' in parameters:
+                self.model.coefs_ = parameters['coefs_']
+                self.model.intercepts_ = parameters['intercepts_']
+                
+            if 'classes_' in parameters:
+                self.model.classes_ = parameters['classes_']
+                # Force re-initialization of properties if needed
+                self.model.n_outputs_ = len(self.model.classes_)
+                self.model.out_activation_ = 'logistic' if self.model.n_outputs_ == 1 else 'softmax'
+        
+        # SVM parameter setting is more complex and model-dependent
+        
         self.is_fitted = True
 
     def save(self, filepath: str):
@@ -195,7 +206,7 @@ class FederatedLearningNode:
         self.logger.info(f"Consent filtering: {len(data)} -> {len(consented_data)} records")
         return consented_data
 
-    def local_train(self, model_type: str = 'logistic', epochs: int = 1) -> dict:
+    def local_train(self, model_type: str = 'random_forest', epochs: int = 1) -> dict:
         """Perform local training on consented data"""
         if self.data is None or len(self.data) == 0:
             return {
@@ -222,9 +233,9 @@ class FederatedLearningNode:
             # Preprocess data
             X, y = self.model.preprocess_data(training_data)
 
-            # Split for validation
+            # Split for validation - randomness enabled
             X_train, X_val, y_train, y_val = train_test_split(
-                X, y, test_size=0.2, random_state=42, stratify=y
+                X, y, test_size=0.2, stratify=y
             )
 
             # Train model
@@ -332,7 +343,7 @@ class FederatedLearningServer:
             self.logger.error(f"Error registering node {node_id}: {e}")
             return False
 
-    def initialize_global_model(self, model_type: str = 'logistic'):
+    def initialize_global_model(self, model_type: str = 'random_forest'):
         """Initialize the global model"""
         self.global_model = FederatedModel(model_type)
         self.logger.info(f"Initialized global {model_type} model")
@@ -347,32 +358,35 @@ class FederatedLearningServer:
         normalized_weights = [w / total_weight for w in weights]
 
         # Average parameters based on model type
-        if self.global_model.model_type == 'logistic':
-            # Average coefficients and intercepts
-            avg_coef = np.zeros_like(local_parameters[0]['coef_'])
-            avg_intercept = np.zeros_like(local_parameters[0]['intercept_'])
-
-            for params, weight in zip(local_parameters, normalized_weights):
-                avg_coef += weight * params['coef_']
-                avg_intercept += weight * params['intercept_']
-
+        if self.global_model.model_type == 'random_forest':
+            # Federated Forest: Aggregate all trees from all local models
+            aggregated_estimators = []
+            for params in local_parameters:
+                if 'estimators_' in params:
+                    aggregated_estimators.extend(params['estimators_'])
+            
+            # Return the full ensemble of trees
+            # This mathematically represents "averaging" predictions across all local knowledge
             return {
-                'coef_': avg_coef,
-                'intercept_': avg_intercept,
-                'classes_': local_parameters[0]['classes_']  # Assume same classes
+                'estimators_': aggregated_estimators,
+                'classes_': local_parameters[0]['classes_']
             }
 
-        elif self.global_model.model_type == 'neural':
-            # Average neural network weights and biases
+        elif self.global_model.model_type == 'mlp':
+            # Standard FedAvg: Weighted average of weights and biases
             avg_coefs = []
             avg_intercepts = []
 
-            # Initialize with zeros
-            for layer_idx in range(len(local_parameters[0]['coefs_'])):
-                avg_coefs.append(np.zeros_like(local_parameters[0]['coefs_'][layer_idx]))
-                avg_intercepts.append(np.zeros_like(local_parameters[0]['intercepts_'][layer_idx]))
+            # Initialize with zeros based on the first model's architecture
+            first_params = local_parameters[0]
+            for layer_idx in range(len(first_params['coefs_'])):
+                avg_coefs.append(np.zeros_like(first_params['coefs_'][layer_idx]))
+                avg_intercepts.append(np.zeros_like(first_params['intercepts_'][layer_idx]))
 
-            # Weighted average
+            # Weighted sum
+            total_weight = sum(weights)
+            normalized_weights = [w / total_weight for w in weights]
+
             for params, weight in zip(local_parameters, normalized_weights):
                 for layer_idx in range(len(params['coefs_'])):
                     avg_coefs[layer_idx] += weight * params['coefs_'][layer_idx]
@@ -381,15 +395,13 @@ class FederatedLearningServer:
             return {
                 'coefs_': avg_coefs,
                 'intercepts_': avg_intercepts,
-                'classes_': local_parameters[0]['classes_']
+                'classes_': first_params['classes_']
             }
-
+        
         else:
-            # For SVM, return the first parameter set (ensemble averaging is complex)
-            self.logger.warning("SVM federated averaging not fully implemented, using first model")
-            return local_parameters[0]
+             raise ValueError(f"Unsupported model type for aggregation: {self.global_model.model_type}")
 
-    def training_round(self, model_type: str = 'logistic', min_participants: int = 1) -> dict:
+    def training_round(self, model_type: str = 'random_forest', min_participants: int = 1) -> dict:
         """Execute one round of federated training"""
         if len(self.nodes) == 0:
             return {
@@ -484,7 +496,7 @@ class FederatedLearningServer:
                 'message': f'Federated averaging failed: {str(e)}'
             }
 
-    def train(self, num_rounds: int, model_type: str = 'logistic', min_participants: int = 1) -> List[dict]:
+    def train(self, num_rounds: int, model_type: str = 'random_forest', min_participants: int = 1) -> List[dict]:
         """Run multiple rounds of federated training"""
         self.is_training = True
         results = []
@@ -643,7 +655,7 @@ if __name__ == "__main__":
     if registered_count > 0:
         # Run federated training
         print("Starting federated training...")
-        training_results = fl_server.train(num_rounds=3, model_type='logistic', min_participants=1)
+        training_results = fl_server.train(num_rounds=3, model_type='random_forest', min_participants=1)
 
         # Print results
         for i, result in enumerate(training_results):
